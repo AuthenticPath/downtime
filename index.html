@@ -44,7 +44,7 @@
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       padding: 15px;
-      width: 220px;
+      width: 260px;
       transition: transform 0.3s;
     }
     .user-card:hover {
@@ -70,10 +70,14 @@
       margin-bottom: 5px;
     }
     select, input[type="checkbox"] {
-      width: 100%;
-      padding: 5px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
+      margin-right: 5px;
+      margin-bottom: 5px;
+    }
+    .willing-tiers,
+    .block-users {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
     }
     /* Chat Buttons */
     #chat-buttons {
@@ -190,25 +194,37 @@
      * Downtime App Rules & Logic (Enhanced Demo)
      *
      * Core features:
-     * 1. User Network: 7 sample users with name, availability toggle, and tier assignment.
+     * 1. User Network: 7 sample users with name, availability toggle, tier 
+     *    assignment, connection preferences (which tiers they want to connect 
+     *    with), and an option to block specific users.
+     *
      * 2. Chat Options: Choose either 1‑on‑1 or group chat.
+     *
      * 3. Once a 1‑on‑1 chat connects, a panel appears offering:
-     *     - Upgrade to Group Chat (adds additional available users based on tier rules)
-     *     - Invite Specific People (choose from available users)
-     * 4. After any chat connection, connected users are marked unavailable.
-     * 5. Notifications provide real-time feedback.
+     *     - Upgrade to Group Chat (automatically adds additional users
+     *       meeting allowed tier & connection preferences)
+     *     - Invite Specific People (manually choose among available users)
+     *
+     * 4. Matching now factors in:
+     *     - Tier values (and allowed threshold from the initial connection)
+     *     - Each user’s “willing to connect with” preferences
+     *     - Block lists (if either party has blocked the other, connection is blocked)
+     *
+     * 5. After a chat connection, participants are marked unavailable.
      **********************************************************************/
 
+    // Sample users (each now has connection preferences and a block list)
     const users = [
-      { id: 1, name: 'Alice', available: false, tier: 'Tier 1' },
-      { id: 2, name: 'Bob', available: false, tier: 'Tier 2' },
-      { id: 3, name: 'Charlie', available: false, tier: 'Tier 3' },
-      { id: 4, name: 'Diana', available: false, tier: 'Tier 1' },
-      { id: 5, name: 'Ethan', available: false, tier: 'Tier 2' },
-      { id: 6, name: 'Fiona', available: false, tier: 'Tier 3' },
-      { id: 7, name: 'George', available: false, tier: 'Tier 1' }
+      { id: 1, name: 'Alice', available: false, tier: 'Tier 1', willingTiers: ["Tier 1", "Tier 2", "Tier 3"], blockedUsers: [] },
+      { id: 2, name: 'Bob', available: false, tier: 'Tier 2', willingTiers: ["Tier 1", "Tier 2", "Tier 3"], blockedUsers: [] },
+      { id: 3, name: 'Charlie', available: false, tier: 'Tier 3', willingTiers: ["Tier 1", "Tier 2", "Tier 3"], blockedUsers: [] },
+      { id: 4, name: 'Diana', available: false, tier: 'Tier 1', willingTiers: ["Tier 1", "Tier 2", "Tier 3"], blockedUsers: [] },
+      { id: 5, name: 'Ethan', available: false, tier: 'Tier 2', willingTiers: ["Tier 1", "Tier 2", "Tier 3"], blockedUsers: [] },
+      { id: 6, name: 'Fiona', available: false, tier: 'Tier 3', willingTiers: ["Tier 1", "Tier 2", "Tier 3"], blockedUsers: [] },
+      { id: 7, name: 'George', available: false, tier: 'Tier 1', willingTiers: ["Tier 1", "Tier 2", "Tier 3"], blockedUsers: [] }
     ];
 
+    // Tier values for matching (Blocked tier remains separate)
     const tierValues = {
       "Tier 1": 1,
       "Tier 2": 2,
@@ -227,7 +243,18 @@
     const chatOptionsPanel = document.getElementById('chat-options-panel');
     const invitePanel = document.getElementById('invite-panel');
 
-    // Render user cards
+    // Helper: Check if two users can connect based on their preferences and block lists.
+    function canConnect(userA, userB) {
+      // Check connection preferences ("willing to connect with")
+      if (!userA.willingTiers.includes(userB.tier)) return false;
+      if (!userB.willingTiers.includes(userA.tier)) return false;
+      // Check if either user has blocked the other
+      if (userA.blockedUsers.includes(userB.id)) return false;
+      if (userB.blockedUsers.includes(userA.id)) return false;
+      return true;
+    }
+
+    // Render user cards with updated controls for connection preferences and block lists.
     function renderUsers() {
       userNetworkEl.innerHTML = "";
       users.forEach(user => {
@@ -235,7 +262,9 @@
         card.classList.add('user-card');
         card.id = `user-${user.id}`;
         card.classList.add(user.available ? 'available' : 'unavailable');
-        card.innerHTML = `
+
+        // Build basic controls: Name, Availability, and Tier Assignment.
+        let cardHTML = `
           <h3>${user.name}</h3>
           <div class="control-group">
             <label for="avail-${user.id}">Availability:</label>
@@ -251,20 +280,86 @@
             </select>
           </div>
         `;
-        // Event Listeners for toggle and tier change
+
+        // Add connection preference checkboxes ("Willing to connect with")
+        cardHTML += `
+          <div class="control-group">
+            <label>Willing to connect with:</label>
+            <div class="willing-tiers">
+              <input type="checkbox" id="willing-${user.id}-Tier1" value="Tier 1" ${user.willingTiers.includes("Tier 1") ? "checked" : ""}>
+              <label for="willing-${user.id}-Tier1">Tier 1</label>
+              <input type="checkbox" id="willing-${user.id}-Tier2" value="Tier 2" ${user.willingTiers.includes("Tier 2") ? "checked" : ""}>
+              <label for="willing-${user.id}-Tier2">Tier 2</label>
+              <input type="checkbox" id="willing-${user.id}-Tier3" value="Tier 3" ${user.willingTiers.includes("Tier 3") ? "checked" : ""}>
+              <label for="willing-${user.id}-Tier3">Tier 3</label>
+            </div>
+          </div>
+        `;
+
+        // Add controls to block specific users.
+        cardHTML += `<div class="control-group">
+                       <label>Block Users:</label>
+                       <div class="block-users">`;
+        // List all other users as possible block options.
+        users.forEach(other => {
+          if (other.id !== user.id) {
+            const checked = user.blockedUsers.includes(other.id) ? "checked" : "";
+            cardHTML += `<input type="checkbox" id="block-${user.id}-${other.id}" value="${other.id}" ${checked}>
+                         <label for="block-${user.id}-${other.id}">${other.name}</label>`;
+          }
+        });
+        cardHTML += `   </div>
+                     </div>`;
+
+        card.innerHTML = cardHTML;
+        userNetworkEl.appendChild(card);
+
+        // Event Listener: Availability toggle.
         const availCheckbox = card.querySelector(`#avail-${user.id}`);
         availCheckbox.addEventListener('change', (e) => {
           user.available = e.target.checked;
           updateUserCardStyle(user.id);
         });
+
+        // Event Listener: Tier assignment change.
         const tierSelect = card.querySelector(`#tier-${user.id}`);
         tierSelect.addEventListener('change', (e) => {
           user.tier = e.target.value;
         });
-        userNetworkEl.appendChild(card);
+
+        // Event Listeners for "Willing to connect with" checkboxes.
+        const willingCheckboxes = card.querySelectorAll(".willing-tiers input[type='checkbox']");
+        willingCheckboxes.forEach(chk => {
+          chk.addEventListener('change', (e) => {
+            const tierVal = e.target.value;
+            if (e.target.checked) {
+              if (!user.willingTiers.includes(tierVal)) {
+                user.willingTiers.push(tierVal);
+              }
+            } else {
+              user.willingTiers = user.willingTiers.filter(t => t !== tierVal);
+            }
+          });
+        });
+
+        // Event Listeners for "Block Users" checkboxes.
+        const blockCheckboxes = card.querySelectorAll(".block-users input[type='checkbox']");
+        blockCheckboxes.forEach(chk => {
+          chk.addEventListener('change', (e) => {
+            const blockedId = parseInt(e.target.value);
+            if (e.target.checked) {
+              if (!user.blockedUsers.includes(blockedId)) {
+                user.blockedUsers.push(blockedId);
+              }
+            } else {
+              user.blockedUsers = user.blockedUsers.filter(id => id !== blockedId);
+            }
+          });
+        });
       });
     }
 
+    // Update visual style for a user card based on availability.
     function updateUserCardStyle(userId) {
       const user = users.find(u => u.id === userId);
       const card = document.getElementById(`user-${userId}`);
@@ -277,6 +372,7 @@
       }
     }
 
+    // Helper: Add a notification message.
     function addNotification(message) {
       const note = document.createElement('div');
       note.classList.add('notification');
@@ -285,7 +381,7 @@
       setTimeout(() => note.remove(), 5000);
     }
 
-    // Helper functions to mark users as unavailable
+    // Helper: Mark a user (or users) as unavailable.
     function markUserUnavailable(user) {
       user.available = false;
       const checkbox = document.getElementById(`avail-${user.id}`);
@@ -296,7 +392,7 @@
       usersArray.forEach(user => markUserUnavailable(user));
     }
 
-    // 1‑on‑1 Chat: Select first available user and then a partner meeting tier rules.
+    // 1‑on‑1 Chat: Select the first available user and find a connectable partner.
     function startOneOnOneChat() {
       const availableUsers = users.filter(u => u.available && u.tier !== "Blocked");
       if (availableUsers.length < 2) {
@@ -307,13 +403,14 @@
       const allowedTierValue = tierValues[initial.tier];
       let partner = null;
       for (let i = 1; i < availableUsers.length; i++) {
-        if (tierValues[availableUsers[i].tier] <= allowedTierValue) {
-          partner = availableUsers[i];
+        const candidate = availableUsers[i];
+        if (tierValues[candidate.tier] <= allowedTierValue && canConnect(initial, candidate)) {
+          partner = candidate;
           break;
         }
       }
       if (!partner) {
-        addNotification("Not enough participants to form a 1‑on‑1 chat.");
+        addNotification("Not enough connectable participants to form a 1‑on‑1 chat.");
         return;
       }
       currentChat = {
@@ -326,7 +423,7 @@
       updateChatOptionsPanel();
     }
 
-    // Group Chat: Automatically add all available users meeting the allowed tier.
+    // Group Chat: Automatically add all available users meeting allowed tier and connection rules.
     function startGroupChat() {
       const availableUsers = users.filter(u => u.available && u.tier !== "Blocked");
       if (availableUsers.length < 2) {
@@ -336,13 +433,13 @@
       const initial = availableUsers[0];
       const allowedTierValue = tierValues[initial.tier];
       const participants = [initial];
-      availableUsers.slice(1).forEach(user => {
-        if (tierValues[user.tier] <= allowedTierValue) {
-          participants.push(user);
+      availableUsers.slice(1).forEach(candidate => {
+        if (tierValues[candidate.tier] <= allowedTierValue && canConnect(initial, candidate)) {
+          participants.push(candidate);
         }
       });
       if (participants.length < 2) {
-        addNotification("Not enough participants to form a group chat.");
+        addNotification("Not enough connectable participants to form a group chat.");
         return;
       }
       currentChat = {
@@ -355,7 +452,7 @@
       updateChatOptionsPanel();
     }
 
-    // Display Chat Options Panel (for active chats)
+    // Display Chat Options Panel (for active chats).
     function updateChatOptionsPanel() {
       if (!currentChat) {
         chatOptionsPanel.style.display = "none";
@@ -363,7 +460,6 @@
       }
       let html = `<h3>Active Chat (${currentChat.type === "oneOnOne" ? "1‑on‑1" : "Group"})</h3>`;
       html += `<p>Participants: ${currentChat.participants.map(u => u.name).join(", ")}</p>`;
-      // For 1‑on‑1 chats, offer an upgrade option.
       if (currentChat.type === "oneOnOne") {
         html += `<button id="upgrade-btn">Upgrade to Group Chat</button>`;
       }
@@ -379,14 +475,14 @@
       document.getElementById("end-chat-btn").addEventListener("click", endChat);
     }
 
-    // Upgrade a 1‑on‑1 chat to group by automatically adding available users.
+    // Upgrade a 1‑on‑1 chat to a group chat by adding additional available users.
     function upgradeToGroupChat() {
       const availableUsers = users.filter(u => u.available && u.tier !== "Blocked" && 
                                 !currentChat.participants.some(p => p.id === u.id));
       const newParticipants = [];
-      availableUsers.forEach(user => {
-        if (tierValues[user.tier] <= currentChat.allowedTierValue) {
-          newParticipants.push(user);
+      availableUsers.forEach(candidate => {
+        if (tierValues[candidate.tier] <= currentChat.allowedTierValue && canConnect(currentChat.participants[0], candidate)) {
+          newParticipants.push(candidate);
         }
       });
       if (newParticipants.length === 0) {
@@ -397,15 +493,16 @@
         currentChat.participants.push(user);
         markUserUnavailable(user);
       });
-      currentChat.type = "group"; // Now a group chat
+      currentChat.type = "group";
       addNotification(`Group chat upgraded. Participants: ${currentChat.participants.map(u => u.name).join(", ")}`);
       updateChatOptionsPanel();
     }
 
-    // Show panel to invite specific people (list available users not already in chat)
+    // Show panel to invite specific people (only those available and connectable).
     function showInvitePanel() {
       const availableInvitees = users.filter(u => u.available && u.tier !== "Blocked" && 
-                                      !currentChat.participants.some(p => p.id === u.id));
+                                      !currentChat.participants.some(p => p.id === u.id) &&
+                                      canConnect(currentChat.participants[0], u));
       if (availableInvitees.length === 0) {
         addNotification("No additional users available for invitation.");
         return;
@@ -436,7 +533,7 @@
         let successInvites = [];
         let failedInvites = [];
         invitedUsers.forEach(user => {
-          if (tierValues[user.tier] <= currentChat.allowedTierValue) {
+          if (tierValues[user.tier] <= currentChat.allowedTierValue && canConnect(currentChat.participants[0], user)) {
             currentChat.participants.push(user);
             markUserUnavailable(user);
             successInvites.push(user.name);
@@ -448,7 +545,7 @@
           addNotification(`Invited: ${successInvites.join(", ")}`);
         }
         if (failedInvites.length > 0) {
-          addNotification(`Could not invite (tier restrictions): ${failedInvites.join(", ")}`);
+          addNotification(`Could not invite (preferences/tier restrictions): ${failedInvites.join(", ")}`);
         }
         invitePanel.style.display = "none";
         updateChatOptionsPanel();
@@ -469,11 +566,11 @@
       addNotification("Chat ended.");
     }
 
-    // Event Listeners for chat initiation
+    // Event listeners for chat initiation buttons.
     oneOnOneBtn.addEventListener('click', startOneOnOneChat);
     groupChatBtn.addEventListener('click', startGroupChat);
 
-    // Initial render of user cards
+    // Initial render of user cards.
     renderUsers();
   </script>
 </body>
