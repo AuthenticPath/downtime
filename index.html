@@ -44,7 +44,7 @@
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       padding: 15px;
-      width: 300px;
+      width: 320px;
       transition: transform 0.3s;
     }
     .user-card:hover {
@@ -69,18 +69,17 @@
       font-size: 0.9em;
       margin-bottom: 5px;
     }
-    select, input[type="checkbox"] {
+    select, input[type="text"], input[type="checkbox"] {
       padding: 4px;
       border-radius: 5px;
       border: 1px solid #ccc;
       margin-right: 5px;
       margin-bottom: 5px;
     }
-    .personal-tier-assignments {
-      border: 1px dashed #ccc;
-      padding: 5px;
-      border-radius: 5px;
-      background: #fafafa;
+    .willing-tiers, .personal-tier-assignments {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
     }
     .personal-tier-assignments div {
       margin-bottom: 5px;
@@ -161,9 +160,12 @@
     #end-chat-btn:hover {
       background: #c82333;
     }
-    /* Invite Panel */
-    #invite-panel div {
-      margin-bottom: 8px;
+    /* Invite Panel Form Styles */
+    #invite-panel form {
+      margin-top: 10px;
+    }
+    #invite-panel label {
+      margin-bottom: 3px;
     }
     /* Notifications */
     #notifications {
@@ -197,41 +199,64 @@
 
   <script>
     /**********************************************************************
-     * Downtime App Rules & Logic (Enhanced Demo)
+     * Downtime App Rules & Logic (Updated Demo)
      *
      * Core features:
      * 1. User Network: 7 sample users with:
-     *    - A global tier assignment (their own tier)
-     *    - Availability toggle
-     *    - A new "Your Tier Assignments for Others" panel where each user
-     *      assigns a tier (Tier 1, Tier 2, Tier 3, or Blocked) to each of the
-     *      other 6 users. Initial assignments are random.
+     *    - Availability toggle.
+     *    - Willing-to-talk-with checkboxes (for Tier 1, Tier 2, Tier 3).
+     *    - A panel showing "[User's Name]'s Tier Assignment of Others:" where
+     *      each user assigns a tier (Tier 1, Tier 2, Tier 3, or Blocked) to every
+     *      other person. Initial assignments are random.
      *
-     * 2. Chat Options: Choose either 1‑on‑1 or group chat.
+     * 2. Chat Options: Start 1‑on‑1 or group chat.
      *
      * 3. Once a 1‑on‑1 chat connects, a panel appears offering:
-     *     - Upgrade to Group Chat (adds additional connectable users)
-     *     - Invite Specific People (manually choose among available users)
+     *     - Upgrade to Group Chat.
+     *     - Invite Specific People.
      *
-     * 4. Matching factors in:
-     *     - Global tier (used for threshold matching)
-     *     - Personal assignments (if either user has marked the other as "Blocked", no connection)
+     * 4. Matching factors in personal tier assignments (if either party has
+     *    marked the other as "Blocked", no connection is made) and willingness.
      *
-     * 5. After a chat connection, participants are marked unavailable.
+     * 5. Inviting People:
+     *     - When the invite button is clicked, the app asks if you want to invite
+     *       someone already listed or a new person.
+     *     - If inviting a new person, a form asks for the new person’s name and
+     *       what tier they should be added as (their global tier value).
+     *       The new person is then added to the board (and all users’ personal
+     *       assignments are updated accordingly).
      **********************************************************************/
 
-    // Sample users (each has a global tier, availability, and will later get personal assignments)
+    // Sample users (each has an availability flag, willingness, and personal tier assignments)
     const users = [
-      { id: 1, name: 'Alice', available: false, tier: 'Tier 1' },
-      { id: 2, name: 'Bob', available: false, tier: 'Tier 2' },
-      { id: 3, name: 'Charlie', available: false, tier: 'Tier 3' },
-      { id: 4, name: 'Diana', available: false, tier: 'Tier 1' },
-      { id: 5, name: 'Ethan', available: false, tier: 'Tier 2' },
-      { id: 6, name: 'Fiona', available: false, tier: 'Tier 3' },
-      { id: 7, name: 'George', available: false, tier: 'Tier 1' }
+      { id: 1, name: 'Alice', available: false, willingTiers: ["Tier 1", "Tier 2", "Tier 3"] },
+      { id: 2, name: 'Bob', available: false, willingTiers: ["Tier 1", "Tier 2", "Tier 3"] },
+      { id: 3, name: 'Charlie', available: false, willingTiers: ["Tier 1", "Tier 2", "Tier 3"] },
+      { id: 4, name: 'Diana', available: false, willingTiers: ["Tier 1", "Tier 2", "Tier 3"] },
+      { id: 5, name: 'Ethan', available: false, willingTiers: ["Tier 1", "Tier 2", "Tier 3"] },
+      { id: 6, name: 'Fiona', available: false, willingTiers: ["Tier 1", "Tier 2", "Tier 3"] },
+      { id: 7, name: 'George', available: false, willingTiers: ["Tier 1", "Tier 2", "Tier 3"] }
     ];
 
-    // Define tier values (for matching threshold)
+    // Global matching uses each user's (non-editable) global tier.
+    // For simplicity, we set a default global tier based on initial data.
+    // (This value is used for matching but is not user-editable.)
+    const defaultGlobalTier = {
+      "Alice": "Tier 1",
+      "Bob": "Tier 2",
+      "Charlie": "Tier 3",
+      "Diana": "Tier 1",
+      "Ethan": "Tier 2",
+      "Fiona": "Tier 3",
+      "George": "Tier 1"
+    };
+
+    // Add a globalTier property to each user (not editable on card)
+    users.forEach(user => {
+      user.globalTier = defaultGlobalTier[user.name] || "Tier 3";
+    });
+
+    // Tier values for matching (Blocked = Infinity)
     const tierValues = {
       "Tier 1": 1,
       "Tier 2": 2,
@@ -239,19 +264,22 @@
       "Blocked": Infinity
     };
 
-    // Tier options for personal assignments.
+    // Personal tier options for assigning others.
     const personalTierOptions = ["Tier 1", "Tier 2", "Tier 3", "Blocked"];
 
-    // Initialize each user's personal tier assignments for every other user (randomly assigned).
-    users.forEach(user => {
-      user.personalTiers = {};
-      users.forEach(other => {
-        if (other.id !== user.id) {
-          const randomTier = personalTierOptions[Math.floor(Math.random() * personalTierOptions.length)];
-          user.personalTiers[other.id] = randomTier;
-        }
+    // Initialize each user's personal tier assignments for every other user (randomly assigned)
+    function initPersonalTiers() {
+      users.forEach(user => {
+        user.personalTiers = {};
+        users.forEach(other => {
+          if (other.id !== user.id) {
+            const randomTier = personalTierOptions[Math.floor(Math.random() * personalTierOptions.length)];
+            user.personalTiers[other.id] = randomTier;
+          }
+        });
       });
-    });
+    }
+    initPersonalTiers();
 
     // Global chat state: currentChat = { type, participants, allowedTierValue }
     let currentChat = null;
@@ -264,15 +292,18 @@
     const chatOptionsPanel = document.getElementById('chat-options-panel');
     const invitePanel = document.getElementById('invite-panel');
 
-    // Helper: Check if two users can connect based on their personal tier assignments.
+    // Helper: Check if two users can connect based on personal tier assignments and willingness.
     function canConnect(userA, userB) {
-      // If either user has marked the other as "Blocked", do not connect.
+      // Check personal assignments (if either has marked the other as Blocked, no connection)
       if (userA.personalTiers[userB.id] === "Blocked") return false;
       if (userB.personalTiers[userA.id] === "Blocked") return false;
+      // Check if both are willing to talk to the other’s global tier.
+      if (!userA.willingTiers.includes(userB.globalTier)) return false;
+      if (!userB.willingTiers.includes(userA.globalTier)) return false;
       return true;
     }
 
-    // Render user cards including the new personal tier assignment panel.
+    // Render user cards.
     function renderUsers() {
       userNetworkEl.innerHTML = "";
       users.forEach(user => {
@@ -288,27 +319,25 @@
             <input type="checkbox" id="avail-${user.id}" ${user.available ? 'checked' : ''}>
           </div>
           <div class="control-group">
-            <label for="tier-${user.id}">Your Global Tier (Self):</label>
-            <select id="tier-${user.id}">
-              <option value="Tier 1" ${user.tier === 'Tier 1' ? 'selected' : ''}>Tier 1</option>
-              <option value="Tier 2" ${user.tier === 'Tier 2' ? 'selected' : ''}>Tier 2</option>
-              <option value="Tier 3" ${user.tier === 'Tier 3' ? 'selected' : ''}>Tier 3</option>
-              <option value="Blocked" ${user.tier === 'Blocked' ? 'selected' : ''}>Blocked</option>
-            </select>
+            <label>Willing to talk with:</label>
+            <div class="willing-tiers">
+              <input type="checkbox" id="willing-${user.id}-Tier1" value="Tier 1" ${user.willingTiers.includes("Tier 1") ? "checked" : ""}>
+              <label for="willing-${user.id}-Tier1">Tier 1</label>
+              <input type="checkbox" id="willing-${user.id}-Tier2" value="Tier 2" ${user.willingTiers.includes("Tier 2") ? "checked" : ""}>
+              <label for="willing-${user.id}-Tier2">Tier 2</label>
+              <input type="checkbox" id="willing-${user.id}-Tier3" value="Tier 3" ${user.willingTiers.includes("Tier 3") ? "checked" : ""}>
+              <label for="willing-${user.id}-Tier3">Tier 3</label>
+            </div>
           </div>
-        `;
-
-        // New Panel: Personal Tier Assignments for Others
-        cardHTML += `
           <div class="control-group">
-            <label>Your Tier Assignments for Others:</label>
+            <label>${user.name}'s Tier Assignment of Others:</label>
             <div class="personal-tier-assignments">
         `;
         users.forEach(other => {
           if (other.id !== user.id) {
             cardHTML += `
               <div>
-                <label for="personal-tier-${user.id}-${other.id}" style="display:inline-block; width:80px;">${other.name}:</label>
+                <label for="personal-tier-${user.id}-${other.id}" style="display:inline-block; width:100px;">${other.name}:</label>
                 <select id="personal-tier-${user.id}-${other.id}">
                   <option value="Tier 1" ${user.personalTiers[other.id] === 'Tier 1' ? 'selected' : ''}>Tier 1</option>
                   <option value="Tier 2" ${user.personalTiers[other.id] === 'Tier 2' ? 'selected' : ''}>Tier 2</option>
@@ -320,24 +349,32 @@
           }
         });
         cardHTML += `</div></div>`;
-
         card.innerHTML = cardHTML;
         userNetworkEl.appendChild(card);
 
-        // Event Listener: Availability toggle.
+        // Availability toggle.
         const availCheckbox = card.querySelector(`#avail-${user.id}`);
         availCheckbox.addEventListener('change', (e) => {
           user.available = e.target.checked;
           updateUserCardStyle(user.id);
         });
 
-        // Event Listener: Global tier assignment change.
-        const tierSelect = card.querySelector(`#tier-${user.id}`);
-        tierSelect.addEventListener('change', (e) => {
-          user.tier = e.target.value;
+        // Willingness checkboxes.
+        const willingCheckboxes = card.querySelectorAll(".willing-tiers input[type='checkbox']");
+        willingCheckboxes.forEach(chk => {
+          chk.addEventListener('change', (e) => {
+            const tierVal = e.target.value;
+            if (e.target.checked) {
+              if (!user.willingTiers.includes(tierVal)) {
+                user.willingTiers.push(tierVal);
+              }
+            } else {
+              user.willingTiers = user.willingTiers.filter(t => t !== tierVal);
+            }
+          });
         });
 
-        // Event Listeners for each personal tier assignment dropdown.
+        // Personal tier assignment dropdowns.
         users.forEach(other => {
           if (other.id !== user.id) {
             const selectEl = card.querySelector(`#personal-tier-${user.id}-${other.id}`);
@@ -349,7 +386,7 @@
       });
     }
 
-    // Update visual style for a user card based on availability.
+    // Update visual style for a user card.
     function updateUserCardStyle(userId) {
       const user = users.find(u => u.id === userId);
       const card = document.getElementById(`user-${userId}`);
@@ -362,7 +399,7 @@
       }
     }
 
-    // Helper: Add a notification message.
+    // Notification helper.
     function addNotification(message) {
       const note = document.createElement('div');
       note.classList.add('notification');
@@ -371,7 +408,7 @@
       setTimeout(() => note.remove(), 5000);
     }
 
-    // Helper: Mark a user (or users) as unavailable.
+    // Mark user(s) as unavailable.
     function markUserUnavailable(user) {
       user.available = false;
       const checkbox = document.getElementById(`avail-${user.id}`);
@@ -382,27 +419,28 @@
       usersArray.forEach(user => markUserUnavailable(user));
     }
 
-    // 1‑on‑1 Chat: Select the first available user and find a connectable partner.
+    // 1‑on‑1 Chat: Find first available connectable pair.
     function startOneOnOneChat() {
-      const availableUsers = users.filter(u => u.available && u.tier !== "Blocked");
+      const availableUsers = users.filter(u => u.available);
       if (availableUsers.length < 2) {
         addNotification("No one in your network is available right now. Try again later!");
         return;
       }
       const initial = availableUsers[0];
-      const allowedTierValue = tierValues[initial.tier];
       let partner = null;
       for (let i = 1; i < availableUsers.length; i++) {
         const candidate = availableUsers[i];
-        if (tierValues[candidate.tier] <= allowedTierValue && canConnect(initial, candidate)) {
+        if (canConnect(initial, candidate)) {
           partner = candidate;
           break;
         }
       }
       if (!partner) {
-        addNotification("Not enough connectable participants to form a 1‑on‑1 chat.");
+        addNotification("Not enough connectable participants for a 1‑on‑1 chat.");
         return;
       }
+      // For matching, use the initial user's global tier as threshold.
+      const allowedTierValue = tierValues[initial.globalTier];
       currentChat = {
         type: "oneOnOne",
         participants: [initial, partner],
@@ -413,23 +451,23 @@
       updateChatOptionsPanel();
     }
 
-    // Group Chat: Automatically add all available users meeting allowed tier and connection rules.
+    // Group Chat: Add all available connectable users.
     function startGroupChat() {
-      const availableUsers = users.filter(u => u.available && u.tier !== "Blocked");
+      const availableUsers = users.filter(u => u.available);
       if (availableUsers.length < 2) {
         addNotification("No one in your network is available right now. Try again later!");
         return;
       }
       const initial = availableUsers[0];
-      const allowedTierValue = tierValues[initial.tier];
+      const allowedTierValue = tierValues[initial.globalTier];
       const participants = [initial];
       availableUsers.slice(1).forEach(candidate => {
-        if (tierValues[candidate.tier] <= allowedTierValue && canConnect(initial, candidate)) {
+        if (canConnect(initial, candidate)) {
           participants.push(candidate);
         }
       });
       if (participants.length < 2) {
-        addNotification("Not enough connectable participants to form a group chat.");
+        addNotification("Not enough connectable participants for a group chat.");
         return;
       }
       currentChat = {
@@ -442,7 +480,7 @@
       updateChatOptionsPanel();
     }
 
-    // Display Chat Options Panel (for active chats).
+    // Update Chat Options Panel.
     function updateChatOptionsPanel() {
       if (!currentChat) {
         chatOptionsPanel.style.display = "none";
@@ -453,7 +491,7 @@
       if (currentChat.type === "oneOnOne") {
         html += `<button id="upgrade-btn">Upgrade to Group Chat</button>`;
       }
-      html += `<button id="invite-btn">Invite Specific People</button>`;
+      html += `<button id="invite-btn">Invite People</button>`;
       html += `<button id="end-chat-btn">End Chat</button>`;
       chatOptionsPanel.innerHTML = html;
       chatOptionsPanel.style.display = "block";
@@ -465,13 +503,12 @@
       document.getElementById("end-chat-btn").addEventListener("click", endChat);
     }
 
-    // Upgrade a 1‑on‑1 chat to a group chat by adding additional available users.
+    // Upgrade 1‑on‑1 chat to group.
     function upgradeToGroupChat() {
-      const availableUsers = users.filter(u => u.available && u.tier !== "Blocked" && 
-                                !currentChat.participants.some(p => p.id === u.id));
+      const availableUsers = users.filter(u => u.available && !currentChat.participants.some(p => p.id === u.id));
       const newParticipants = [];
       availableUsers.forEach(candidate => {
-        if (tierValues[candidate.tier] <= currentChat.allowedTierValue && canConnect(currentChat.participants[0], candidate)) {
+        if (canConnect(currentChat.participants[0], candidate)) {
           newParticipants.push(candidate);
         }
       });
@@ -488,26 +525,50 @@
       updateChatOptionsPanel();
     }
 
-    // Show panel to invite specific people (only those available and connectable).
+    // Invite Panel: Ask whether to invite an existing person or a new person.
     function showInvitePanel() {
-      const availableInvitees = users.filter(u => u.available && u.tier !== "Blocked" && 
-                                      !currentChat.participants.some(p => p.id === u.id) &&
-                                      canConnect(currentChat.participants[0], u));
+      invitePanel.innerHTML = `
+        <h3>Invite People</h3>
+        <p>Would you like to invite someone already listed or a new person?</p>
+        <div>
+          <input type="radio" name="inviteOption" id="inviteExisting" value="existing" checked>
+          <label for="inviteExisting">Invite from existing</label>
+          <input type="radio" name="inviteOption" id="inviteNew" value="new">
+          <label for="inviteNew">Invite a new person</label>
+        </div>
+        <button id="invite-continue-btn">Continue</button>
+      `;
+      invitePanel.style.display = "block";
+      document.getElementById("invite-continue-btn").addEventListener("click", processInviteChoice);
+    }
+
+    // Process invite option selection.
+    function processInviteChoice() {
+      const selectedOption = document.querySelector('input[name="inviteOption"]:checked').value;
+      if (selectedOption === "existing") {
+        showExistingInviteForm();
+      } else {
+        showNewInviteForm();
+      }
+    }
+
+    // Show invite form for existing users (similar to previous implementation).
+    function showExistingInviteForm() {
+      const availableInvitees = users.filter(u => u.available && !currentChat.participants.some(p => p.id === u.id) && canConnect(currentChat.participants[0], u));
       if (availableInvitees.length === 0) {
         addNotification("No additional users available for invitation.");
+        invitePanel.style.display = "none";
         return;
       }
-      let html = "<h3>Invite Specific People</h3>";
+      let html = "<h3>Invite from Existing Users</h3>";
       availableInvitees.forEach(user => {
         html += `<div>
                    <input type="checkbox" id="invite-${user.id}" value="${user.id}">
-                   <label for="invite-${user.id}">${user.name} (Global: ${user.tier})</label>
+                   <label for="invite-${user.id}">${user.name} (Global: ${user.globalTier})</label>
                  </div>`;
       });
       html += '<button id="send-invites-btn">Send Invites</button>';
       invitePanel.innerHTML = html;
-      invitePanel.style.display = "block";
-
       document.getElementById("send-invites-btn").addEventListener("click", () => {
         const checkboxes = invitePanel.querySelectorAll('input[type="checkbox"]');
         const invitedUsers = [];
@@ -523,7 +584,7 @@
         let successInvites = [];
         let failedInvites = [];
         invitedUsers.forEach(user => {
-          if (tierValues[user.tier] <= currentChat.allowedTierValue && canConnect(currentChat.participants[0], user)) {
+          if (canConnect(currentChat.participants[0], user)) {
             currentChat.participants.push(user);
             markUserUnavailable(user);
             successInvites.push(user.name);
@@ -542,7 +603,65 @@
       });
     }
 
-    // End current chat: mark participants available again and reset the chat state.
+    // Show invite form for a new person.
+    function showNewInviteForm() {
+      let html = `
+        <h3>Invite a New Person</h3>
+        <form id="new-invite-form">
+          <div>
+            <label for="newName">Name:</label>
+            <input type="text" id="newName" required>
+          </div>
+          <div>
+            <label for="newTier">Global Tier:</label>
+            <select id="newTier">
+              <option value="Tier 1">Tier 1</option>
+              <option value="Tier 2">Tier 2</option>
+              <option value="Tier 3">Tier 3</option>
+              <option value="Blocked">Blocked</option>
+            </select>
+          </div>
+          <button type="submit">Add New Person</button>
+        </form>
+      `;
+      invitePanel.innerHTML = html;
+      document.getElementById("new-invite-form").addEventListener("submit", function(e) {
+        e.preventDefault();
+        const newName = document.getElementById("newName").value.trim();
+        const newTier = document.getElementById("newTier").value;
+        if (!newName) {
+          addNotification("Name cannot be empty.");
+          return;
+        }
+        addNewUser(newName, newTier);
+        invitePanel.style.display = "none";
+        renderUsers();
+      });
+    }
+
+    // Add a new user to the board.
+    function addNewUser(name, globalTier) {
+      const newId = users.length ? Math.max(...users.map(u => u.id)) + 1 : 1;
+      const newUser = {
+        id: newId,
+        name: name,
+        available: true,
+        globalTier: globalTier,
+        willingTiers: ["Tier 1", "Tier 2", "Tier 3"],
+        personalTiers: {}
+      };
+      // Set up personal tier assignments for the new user against all existing users.
+      users.forEach(existingUser => {
+        // For the new user, assign a random tier for each existing user.
+        newUser.personalTiers[existingUser.id] = personalTierOptions[Math.floor(Math.random() * personalTierOptions.length)];
+        // For each existing user, add a default assignment for the new user.
+        existingUser.personalTiers[newUser.id] = personalTierOptions[Math.floor(Math.random() * personalTierOptions.length)];
+      });
+      users.push(newUser);
+      addNotification(`${name} has been added to the network as ${globalTier}.`);
+    }
+
+    // End current chat.
     function endChat() {
       if (!currentChat) return;
       currentChat.participants.forEach(user => {
@@ -560,7 +679,7 @@
     oneOnOneBtn.addEventListener('click', startOneOnOneChat);
     groupChatBtn.addEventListener('click', startGroupChat);
 
-    // Initial render of user cards.
+    // Initial render.
     renderUsers();
   </script>
 </body>
