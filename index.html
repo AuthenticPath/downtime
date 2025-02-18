@@ -247,7 +247,15 @@
       z-index: 1000;
       max-width: 600px;
       width: 90%;
+      height: 80%;
+      overflow-y: auto;
       display: none;
+    }
+    #instructions-dialog h1, 
+    #instructions-dialog h2, 
+    #instructions-dialog p, 
+    #instructions-dialog ul {
+      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -273,16 +281,75 @@
   <!-- Instructions Dialog Elements -->
   <div id="instructions-overlay"></div>
   <div id="instructions-dialog">
-    <h3>How It Works</h3>
-    <p>Welcome to the Downtime App Demo simulation. Here’s how it works:</p>
+    <h1><strong>How to Use the Downtime App Demo</strong></h1>
+    <p>Welcome to the <strong>Downtime App Demo</strong>! This guide will walk you through how the app works so you can explore its features with confidence.</p>
+    <hr>
+    <h2><strong>1. Understanding Your Contacts and Tier Assignments</strong></h2>
     <ul>
-      <li>Each user has a contacts list and personalized tier assignments which determine connection preferences.</li>
-      <li>You can toggle user availability to control who can join chats.</li>
-      <li>Start a 1‑on‑1 or group chat using the chat buttons. Only available users are considered.</li>
-      <li>You can invite users to a chat, add new users to your contacts, or remove users from the network.</li>
-      <li>Your tier settings and contacts determine which users can connect with one another.</li>
+      <li>Each user has a <strong>contacts list</strong> and <strong>tier assignments</strong> that determine who they can connect with.</li>
+      <li><strong>Tiers</strong> help organize contacts based on your connection preferences. For example:
+        <ul>
+          <li><em>Tier 1:</em> Close friends or colleagues you interact with often.</li>
+          <li><em>Tier 2:</em> Acquaintances you interact with occasionally.</li>
+          <li><em>Tier 3:</em> People you connect with less frequently.</li>
+          <li><em>Blocked:</em> Users you do not want to connect with.</li>
+        </ul>
+      </li>
     </ul>
-    <p>Enjoy exploring the simulation!</p>
+    <p><strong>Example:</strong> If you assign Bob to <em>Tier 1</em>, you can chat with him freely. If you move him to <em>Blocked</em>, you won’t be able to connect with him at all.</p>
+    <hr>
+    <h2><strong>2. Managing Your Availability</strong></h2>
+    <ul>
+      <li>You can <strong>toggle your availability</strong> to control whether others can invite you to chats.</li>
+      <li>If you’re <em>available</em>, other users can invite you to <strong>1-on-1 or group chats</strong>.</li>
+      <li>If you’re <em>unavailable</em>, no one will be able to start a chat with you.</li>
+    </ul>
+    <p><strong>Example:</strong> Alice is online and marked <em>available</em>, but Bob is <em>unavailable</em>. If you try to start a chat, only Alice will show up as an option.</p>
+    <hr>
+    <h2><strong>3. Starting a Chat</strong></h2>
+    <ul>
+      <li>You can initiate <strong>1-on-1</strong> or <strong>group chats</strong> by clicking the chat buttons:
+        <ul>
+          <li><strong>Start 1‑on‑1 Chat</strong> &rarr; Connects you with one available user.</li>
+          <li><strong>Start Group Chat</strong> &rarr; Connects you with multiple available users.</li>
+        </ul>
+      </li>
+      <li><strong>Important:</strong> Only users who are <em>available</em> and meet your tier connection settings will be included.</li>
+    </ul>
+    <p><strong>Example:</strong> If you are <em>available</em> and have Alice in <em>Tier 1</em>, but Bob in <em>Tier 3</em>, and your settings only allow <em>Tier 1 and 2</em> connections, Bob won’t be able to join your chat.</p>
+    <hr>
+    <h2><strong>4. Inviting Users and Managing Contacts</strong></h2>
+    <ul>
+      <li>You can <strong>invite users</strong> to a chat, add new users to your contacts, or remove users from your network.</li>
+      <li>Users must be in your <strong>contacts list</strong> and within an allowed tier to be invited.</li>
+    </ul>
+    <p><strong>Example:</strong><br>
+      If Alice is in your contacts and marked as <em>Tier 1</em>, you can invite her to any chat.<br>
+      If Bob is in <em>Tier 3</em> and your settings allow <em>Tier 1 and 2 only</em>, you’ll need to adjust his tier before inviting him.<br>
+      If you remove Alice from your contacts, she will no longer appear as an option to chat.
+    </p>
+    <hr>
+    <h2><strong>5. Removing Users</strong></h2>
+    <ul>
+      <li>You can remove users from your contacts at any time.</li>
+      <li>If a user is removed, they will no longer be able to start a chat with you or see you as an available contact.</li>
+    </ul>
+    <p><strong>Example:</strong> If you remove Bob from your contacts, he won’t appear in your chat options anymore.</p>
+    <hr>
+    <h2><strong>6. Understanding Tier-Based Connection Rules</strong></h2>
+    <ul>
+      <li>Your <strong>tier settings</strong> decide who you can connect with.</li>
+      <li>If both users have each other in an <strong>allowed tier</strong>, they can chat.</li>
+      <li>If one user has the other <strong>blocked</strong>, they won’t be able to chat.</li>
+    </ul>
+    <p><strong>Example:</strong><br>
+      If Alice has Bob in <em>Tier 1</em>, but Bob has Alice in <em>Blocked</em>, they cannot chat.<br>
+      If Alice sets Bob to <em>Tier 2</em> and Bob allows <em>Tier 1 &amp; 2</em> connections, they can chat.
+    </p>
+    <hr>
+    <h2><strong>7. Experiment and Explore</strong></h2>
+    <p>Feel free to test different <strong>tier settings, availability toggles, and chat invitations</strong> to see how the simulation works. If you have any questions, try adjusting user settings and observing how they affect your ability to connect.</p>
+    <p>Enjoy exploring the <strong>Downtime App Demo</strong>!</p>
     <button id="close-instructions-btn">Close</button>
   </div>
 
