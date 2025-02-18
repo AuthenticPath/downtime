@@ -432,6 +432,17 @@
       setTimeout(() => note.remove(), 5000);
     }
 
+    // Mark users as unavailable
+    function markUserUnavailable(user) {
+      user.available = false;
+      const checkbox = document.getElementById(`avail-${user.id}`);
+      if (checkbox) checkbox.checked = false;
+      updateUserCardStyle(user.id);
+    }
+    function markUsersUnavailable(usersArray) {
+      usersArray.forEach(u => markUserUnavailable(u));
+    }
+
     // Delete a user from the board and remove from all contacts
     function deleteUser(userId) {
       if (!confirm("Are you sure you want to remove this user?")) return;
