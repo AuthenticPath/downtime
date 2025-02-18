@@ -44,7 +44,7 @@
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       padding: 15px;
-      width: 260px;
+      width: 300px;
       transition: transform 0.3s;
     }
     .user-card:hover {
@@ -70,14 +70,20 @@
       margin-bottom: 5px;
     }
     select, input[type="checkbox"] {
+      padding: 4px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
       margin-right: 5px;
       margin-bottom: 5px;
     }
-    .willing-tiers,
-    .block-users {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
+    .personal-tier-assignments {
+      border: 1px dashed #ccc;
+      padding: 5px;
+      border-radius: 5px;
+      background: #fafafa;
+    }
+    .personal-tier-assignments div {
+      margin-bottom: 5px;
     }
     /* Chat Buttons */
     #chat-buttons {
@@ -194,43 +200,58 @@
      * Downtime App Rules & Logic (Enhanced Demo)
      *
      * Core features:
-     * 1. User Network: 7 sample users with name, availability toggle, tier 
-     *    assignment, connection preferences (which tiers they want to connect 
-     *    with), and an option to block specific users.
+     * 1. User Network: 7 sample users with:
+     *    - A global tier assignment (their own tier)
+     *    - Availability toggle
+     *    - A new "Your Tier Assignments for Others" panel where each user
+     *      assigns a tier (Tier 1, Tier 2, Tier 3, or Blocked) to each of the
+     *      other 6 users. Initial assignments are random.
      *
      * 2. Chat Options: Choose either 1‑on‑1 or group chat.
      *
      * 3. Once a 1‑on‑1 chat connects, a panel appears offering:
-     *     - Upgrade to Group Chat (automatically adds additional users
-     *       meeting allowed tier & connection preferences)
+     *     - Upgrade to Group Chat (adds additional connectable users)
      *     - Invite Specific People (manually choose among available users)
      *
-     * 4. Matching now factors in:
-     *     - Tier values (and allowed threshold from the initial connection)
-     *     - Each user’s “willing to connect with” preferences
-     *     - Block lists (if either party has blocked the other, connection is blocked)
+     * 4. Matching factors in:
+     *     - Global tier (used for threshold matching)
+     *     - Personal assignments (if either user has marked the other as "Blocked", no connection)
      *
      * 5. After a chat connection, participants are marked unavailable.
      **********************************************************************/
 
-    // Sample users (each now has connection preferences and a block list)
+    // Sample users (each has a global tier, availability, and will later get personal assignments)
     const users = [
-      { id: 1, name: 'Alice', available: false, tier: 'Tier 1', willingTiers: ["Tier 1", "Tier 2", "Tier 3"], blockedUsers: [] },
-      { id: 2, name: 'Bob', available: false, tier: 'Tier 2', willingTiers: ["Tier 1", "Tier 2", "Tier 3"], blockedUsers: [] },
-      { id: 3, name: 'Charlie', available: false, tier: 'Tier 3', willingTiers: ["Tier 1", "Tier 2", "Tier 3"], blockedUsers: [] },
-      { id: 4, name: 'Diana', available: false, tier: 'Tier 1', willingTiers: ["Tier 1", "Tier 2", "Tier 3"], blockedUsers: [] },
-      { id: 5, name: 'Ethan', available: false, tier: 'Tier 2', willingTiers: ["Tier 1", "Tier 2", "Tier 3"], blockedUsers: [] },
-      { id: 6, name: 'Fiona', available: false, tier: 'Tier 3', willingTiers: ["Tier 1", "Tier 2", "Tier 3"], blockedUsers: [] },
-      { id: 7, name: 'George', available: false, tier: 'Tier 1', willingTiers: ["Tier 1", "Tier 2", "Tier 3"], blockedUsers: [] }
+      { id: 1, name: 'Alice', available: false, tier: 'Tier 1' },
+      { id: 2, name: 'Bob', available: false, tier: 'Tier 2' },
+      { id: 3, name: 'Charlie', available: false, tier: 'Tier 3' },
+      { id: 4, name: 'Diana', available: false, tier: 'Tier 1' },
+      { id: 5, name: 'Ethan', available: false, tier: 'Tier 2' },
+      { id: 6, name: 'Fiona', available: false, tier: 'Tier 3' },
+      { id: 7, name: 'George', available: false, tier: 'Tier 1' }
     ];
 
-    // Tier values for matching (Blocked tier remains separate)
+    // Define tier values (for matching threshold)
     const tierValues = {
       "Tier 1": 1,
       "Tier 2": 2,
       "Tier 3": 3,
       "Blocked": Infinity
     };
+
+    // Tier options for personal assignments.
+    const personalTierOptions = ["Tier 1", "Tier 2", "Tier 3", "Blocked"];
+
+    // Initialize each user's personal tier assignments for every other user (randomly assigned).
+    users.forEach(user => {
+      user.personalTiers = {};
+      users.forEach(other => {
+        if (other.id !== user.id) {
+          const randomTier = personalTierOptions[Math.floor(Math.random() * personalTierOptions.length)];
+          user.personalTiers[other.id] = randomTier;
+        }
+      });
+    });
 
     // Global chat state: currentChat = { type, participants, allowedTierValue }
     let currentChat = null;
@@ -243,18 +264,15 @@
     const chatOptionsPanel = document.getElementById('chat-options-panel');
     const invitePanel = document.getElementById('invite-panel');
 
-    // Helper: Check if two users can connect based on their preferences and block lists.
+    // Helper: Check if two users can connect based on their personal tier assignments.
     function canConnect(userA, userB) {
-      // Check connection preferences ("willing to connect with")
-      if (!userA.willingTiers.includes(userB.tier)) return false;
-      if (!userB.willingTiers.includes(userA.tier)) return false;
-      // Check if either user has blocked the other
-      if (userA.blockedUsers.includes(userB.id)) return false;
-      if (userB.blockedUsers.includes(userA.id)) return false;
+      // If either user has marked the other as "Blocked", do not connect.
+      if (userA.personalTiers[userB.id] === "Blocked") return false;
+      if (userB.personalTiers[userA.id] === "Blocked") return false;
       return true;
     }
 
-    // Render user cards with updated controls for connection preferences and block lists.
+    // Render user cards including the new personal tier assignment panel.
     function renderUsers() {
       userNetworkEl.innerHTML = "";
       users.forEach(user => {
@@ -263,7 +281,6 @@
         card.id = `user-${user.id}`;
         card.classList.add(user.available ? 'available' : 'unavailable');
 
-        // Build basic controls: Name, Availability, and Tier Assignment.
         let cardHTML = `
           <h3>${user.name}</h3>
           <div class="control-group">
@@ -271,7 +288,7 @@
             <input type="checkbox" id="avail-${user.id}" ${user.available ? 'checked' : ''}>
           </div>
           <div class="control-group">
-            <label for="tier-${user.id}">Tier Assignment:</label>
+            <label for="tier-${user.id}">Your Global Tier (Self):</label>
             <select id="tier-${user.id}">
               <option value="Tier 1" ${user.tier === 'Tier 1' ? 'selected' : ''}>Tier 1</option>
               <option value="Tier 2" ${user.tier === 'Tier 2' ? 'selected' : ''}>Tier 2</option>
@@ -281,35 +298,28 @@
           </div>
         `;
 
-        // Add connection preference checkboxes ("Willing to connect with")
+        // New Panel: Personal Tier Assignments for Others
         cardHTML += `
           <div class="control-group">
-            <label>Willing to connect with:</label>
-            <div class="willing-tiers">
-              <input type="checkbox" id="willing-${user.id}-Tier1" value="Tier 1" ${user.willingTiers.includes("Tier 1") ? "checked" : ""}>
-              <label for="willing-${user.id}-Tier1">Tier 1</label>
-              <input type="checkbox" id="willing-${user.id}-Tier2" value="Tier 2" ${user.willingTiers.includes("Tier 2") ? "checked" : ""}>
-              <label for="willing-${user.id}-Tier2">Tier 2</label>
-              <input type="checkbox" id="willing-${user.id}-Tier3" value="Tier 3" ${user.willingTiers.includes("Tier 3") ? "checked" : ""}>
-              <label for="willing-${user.id}-Tier3">Tier 3</label>
-            </div>
-          </div>
+            <label>Your Tier Assignments for Others:</label>
+            <div class="personal-tier-assignments">
         `;
-
-        // Add controls to block specific users.
-        cardHTML += `<div class="control-group">
-                       <label>Block Users:</label>
-                       <div class="block-users">`;
-        // List all other users as possible block options.
         users.forEach(other => {
           if (other.id !== user.id) {
-            const checked = user.blockedUsers.includes(other.id) ? "checked" : "";
-            cardHTML += `<input type="checkbox" id="block-${user.id}-${other.id}" value="${other.id}" ${checked}>
-                         <label for="block-${user.id}-${other.id}">${other.name}</label>`;
+            cardHTML += `
+              <div>
+                <label for="personal-tier-${user.id}-${other.id}" style="display:inline-block; width:80px;">${other.name}:</label>
+                <select id="personal-tier-${user.id}-${other.id}">
+                  <option value="Tier 1" ${user.personalTiers[other.id] === 'Tier 1' ? 'selected' : ''}>Tier 1</option>
+                  <option value="Tier 2" ${user.personalTiers[other.id] === 'Tier 2' ? 'selected' : ''}>Tier 2</option>
+                  <option value="Tier 3" ${user.personalTiers[other.id] === 'Tier 3' ? 'selected' : ''}>Tier 3</option>
+                  <option value="Blocked" ${user.personalTiers[other.id] === 'Blocked' ? 'selected' : ''}>Blocked</option>
+                </select>
+              </div>
+            `;
           }
         });
-        cardHTML += `   </div>
-                     </div>`;
+        cardHTML += `</div></div>`;
 
         card.innerHTML = cardHTML;
         userNetworkEl.appendChild(card);
@@ -321,40 +331,20 @@
           updateUserCardStyle(user.id);
         });
 
-        // Event Listener: Tier assignment change.
+        // Event Listener: Global tier assignment change.
         const tierSelect = card.querySelector(`#tier-${user.id}`);
         tierSelect.addEventListener('change', (e) => {
           user.tier = e.target.value;
         });
 
-        // Event Listeners for "Willing to connect with" checkboxes.
-        const willingCheckboxes = card.querySelectorAll(".willing-tiers input[type='checkbox']");
-        willingCheckboxes.forEach(chk => {
-          chk.addEventListener('change', (e) => {
-            const tierVal = e.target.value;
-            if (e.target.checked) {
-              if (!user.willingTiers.includes(tierVal)) {
-                user.willingTiers.push(tierVal);
-              }
-            } else {
-              user.willingTiers = user.willingTiers.filter(t => t !== tierVal);
-            }
-          });
-        });
-
-        // Event Listeners for "Block Users" checkboxes.
-        const blockCheckboxes = card.querySelectorAll(".block-users input[type='checkbox']");
-        blockCheckboxes.forEach(chk => {
-          chk.addEventListener('change', (e) => {
-            const blockedId = parseInt(e.target.value);
-            if (e.target.checked) {
-              if (!user.blockedUsers.includes(blockedId)) {
-                user.blockedUsers.push(blockedId);
-              }
-            } else {
-              user.blockedUsers = user.blockedUsers.filter(id => id !== blockedId);
-            }
-          });
+        // Event Listeners for each personal tier assignment dropdown.
+        users.forEach(other => {
+          if (other.id !== user.id) {
+            const selectEl = card.querySelector(`#personal-tier-${user.id}-${other.id}`);
+            selectEl.addEventListener('change', (e) => {
+              user.personalTiers[other.id] = e.target.value;
+            });
+          }
         });
       });
     }
@@ -511,7 +501,7 @@
       availableInvitees.forEach(user => {
         html += `<div>
                    <input type="checkbox" id="invite-${user.id}" value="${user.id}">
-                   <label for="invite-${user.id}">${user.name} (Tier: ${user.tier})</label>
+                   <label for="invite-${user.id}">${user.name} (Global: ${user.tier})</label>
                  </div>`;
       });
       html += '<button id="send-invites-btn">Send Invites</button>';
