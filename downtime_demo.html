@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Downtime App Demo</title>
+  <style>
+    /* Reset & Global Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f4f8;
+      color: #333;
+      line-height: 1.6;
+    }
+    header {
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      color: #fff;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    header h1 {
+      font-size: 2em;
+    }
+    #container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px 40px;
+    }
+    /* Instructions Dialog */
+    #instructions-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      display: none;
+    }
+    #instructions-dialog {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      z-index: 1000;
+      max-width: 600px;
+      width: 90%;
+      display: none;
+    }
+    #instructions-dialog h3 {
+      margin-bottom: 10px;
+    }
+    #instructions-dialog ul {
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Downtime App Demo</h1>
+  </header>
+  <div id="container">
+    <div id="chat-buttons">
+      <button id="one-on-one-btn">Start 1-on-1 Chat</button>
+      <button id="group-chat-btn">Initiate Group Chat</button>
+    </div>
+    <div id="instructions-container" style="text-align: center; margin-bottom: 20px;">
+      <button id="instructions-btn">How It Works</button>
+    </div>
+    <div id="instructions-overlay"></div>
+    <div id="instructions-dialog">
+      <h3>How to Use the Downtime App Demo</h3>
+      <p>Welcome to the Downtime App Demo. This guide will walk you through how the app works so you can explore its features with confidence.</p>
+      
+      <h4>1. Understanding Your Contacts and Tier Assignments</h4>
+      <ul>
+        <li>Each user has a contacts list and tier assignments that determine who they can connect with.</li>
+        <li>Tiers help organize contacts based on your connection preferences.</li>
+      </ul>
+      <p>Example: If you assign Bob to Tier 1, you can chat with him freely. If you move him to Blocked, you won’t be able to connect with him at all.</p>
+
+      <h4>2. Managing Your Availability</h4>
+      <ul>
+        <li>You can toggle your availability to control whether others can invite you to chats.</li>
+        <li>If you’re available, other users can invite you to 1-on-1 or group chats.</li>
+        <li>If you’re unavailable, no one will be able to start a chat with you.</li>
+      </ul>
+      <p>Example: Alice is online and marked available, but Bob is unavailable. If you try to start a chat, only Alice will show up as an option.</p>
+
+      <h4>3. Starting a Chat</h4>
+      <ul>
+        <li>You can initiate 1-on-1 or group chats by clicking the chat buttons.</li>
+        <li>Only users who are available and meet your tier connection settings will be included.</li>
+      </ul>
+      <p>Example: If you are available and have Alice in Tier 1, but Bob in Tier 3, and your settings only allow Tier 1 and 2 connections, Bob won’t be able to join your chat.</p>
+
+      <h4>4. Inviting Users and Managing Contacts</h4>
+      <ul>
+        <li>You can invite users to a chat, add new users to your contacts, or remove users from your network.</li>
+        <li>Users must be in your contacts list and within an allowed tier to be invited.</li>
+      </ul>
+      <p>Example: If Alice is in your contacts and marked as Tier 1, you can invite her to any chat. If Bob is in Tier 3 and your settings allow Tier 1 & 2 only, you’ll need to adjust his tier before inviting him.</p>
+
+      <h4>5. Removing Users</h4>
+      <ul>
+        <li>You can remove users from your contacts at any time.</li>
+        <li>If a user is removed, they will no longer be able to start a chat with you or see you as an available contact.</li>
+      </ul>
+      <p>Example: If you remove Bob from your contacts, he won’t appear in your chat options anymore.</p>
+
+      <h4>6. Understanding Tier-Based Connection Rules</h4>
+      <ul>
+        <li>Your tier settings decide who you can connect with.</li>
+        <li>If both users have each other in an allowed tier, they can chat.</li>
+        <li>If one user has the other blocked, they won’t be able to chat.</li>
+      </ul>
+      <p>Example: If Alice has Bob in Tier 1, but Bob has Alice in Blocked, they cannot chat.</p>
+
+      <h4>7. Experiment and Explore</h4>
+      <p>Feel free to test different tier settings, availability toggles, and chat invitations to see how the simulation works.</p>
+      <button id="close-instructions-btn">Close</button>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("instructions-btn").addEventListener("click", function() {
+      document.getElementById("instructions-overlay").style.display = "block";
+      document.getElementById("instructions-dialog").style.display = "block";
+    });
+    
+    document.getElementById("close-instructions-btn").addEventListener("click", function() {
+      document.getElementById("instructions-overlay").style.display = "none";
+      document.getElementById("instructions-dialog").style.display = "none";
+    });
+  </script>
+</body>
+</html>
