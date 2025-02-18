@@ -218,63 +218,52 @@
 
   <script>
     /**********************************************************************
-     * Downtime App Rules & Logic (Updated)
+     * Downtime App (No Global Tiers)
      *
-     * 1. Only Two Initial Users (Alice, Bob):
-     *    - Each has an availability toggle, a “Willing to talk with” section,
-     *      and a “Tier Assignment of Others” panel.
-     *    - They start as each other’s contacts.
+     * 1. Two initial users: Alice & Bob
+     *    - They start with each other as contacts.
+     *    - "Tier Assignment of Others" shows only the people in their contacts.
      *
-     * 2. “Tier Assignment of Others” UI:
-     *    - Now only shows the people in that user’s contacts.
+     * 2. Personal Tiers & Willingness
+     *    - "Willing to talk with: Tier 1, Tier 2, Tier 3" means the user is
+     *      open to chatting with people they personally assigned to those tiers.
+     *    - If either user assigned the other "Blocked," or if either user
+     *      assigned the other a tier they’re not willing to talk with, the match fails.
      *
-     * 3. Invites:
-     *    - “Invite to Chat” in an active chat allows inviting only from the inviter’s contacts.
-     *    - “Invite to Join Downtime” (on each user card) lets you invite an existing user
-     *      (who isn’t already a contact) or a brand-new user.
-     *    - When a new user is added, only the inviter’s contacts list is updated to include
-     *      them, and the new user’s contacts list contains only the inviter.
-     *
-     * 4. You can build out the network manually by inviting new users or adding existing ones.
+     * 3. Invite to Join Downtime
+     *    - If "Invite New," the inviter chooses which tier to place the new user in.
+     *      The new user sees the inviter in a random tier. The new user’s contacts
+     *      only contain the inviter, and the inviter’s contacts add the new user.
+     *    - If "Invite Existing," a dropdown lists all existing users (except the inviter).
+     *      If the chosen user is already in contacts, we do nothing but show a message.
+     *      Otherwise, we add each to the other’s contacts, randomizing personal tiers
+     *      if needed.
      **********************************************************************/
 
-    // Two initial sample users: Alice & Bob
+    // Two initial users: Alice & Bob
     const users = [
       {
         id: 1,
         name: 'Alice',
         available: false,
         willingTiers: ["Tier 1", "Tier 2", "Tier 3"],
-        // Alice's only contact is Bob
         contacts: [2],
-        globalTier: "Tier 1",
-        personalTiers: {} // will be filled in later
+        personalTiers: {} // filled in later
       },
       {
         id: 2,
         name: 'Bob',
         available: false,
         willingTiers: ["Tier 1", "Tier 2", "Tier 3"],
-        // Bob's only contact is Alice
         contacts: [1],
-        globalTier: "Tier 2",
-        personalTiers: {} // will be filled in later
+        personalTiers: {} // filled in later
       }
     ];
 
-    // Tier values for matching
-    const tierValues = {
-      "Tier 1": 1,
-      "Tier 2": 2,
-      "Tier 3": 3,
-      "Blocked": Infinity
-    };
-
-    // Personal tier options for assigning others
+    // Our possible tier labels for personal assignments
     const personalTierOptions = ["Tier 1", "Tier 2", "Tier 3", "Blocked"];
 
-    // Initialize each user's personal tier assignments
-    // Only for the people in their contacts
+    // Initialize each user's personal tier assignments (for their contacts only).
     function initPersonalTiers() {
       users.forEach(user => {
         user.contacts.forEach(contactId => {
@@ -287,10 +276,10 @@
     }
     initPersonalTiers();
 
-    // Global chat state: currentChat = { type, participants, allowedTierValue }
+    // Chat state: currentChat = { type, participants }
     let currentChat = null;
 
-    // DOM Elements
+    // DOM elements
     const userNetworkEl = document.getElementById('user-network');
     const notificationsEl = document.getElementById('notifications');
     const oneOnOneBtn = document.getElementById('one-on-one-btn');
@@ -298,14 +287,17 @@
     const chatOptionsPanel = document.getElementById('chat-options-panel');
     const invitePanel = document.getElementById('invite-panel');
 
-    // Helper: Check if two users can connect (personal tier + willingness).
+    // canConnect checks personal tiers & willingness
     function canConnect(userA, userB) {
-      // If either user has blocked the other
-      if ((userA.personalTiers[userB.id] || "") === "Blocked") return false;
-      if ((userB.personalTiers[userA.id] || "") === "Blocked") return false;
-      // If either user is unwilling to talk to the other's global tier
-      if (!userA.willingTiers.includes(userB.globalTier)) return false;
-      if (!userB.willingTiers.includes(userA.globalTier)) return false;
+      const tierAB = userA.personalTiers[userB.id] || "Tier 1";
+      if (tierAB === "Blocked") return false;
+      // If userA isn't willing to talk with the tier they've assigned to userB
+      if (!userA.willingTiers.includes(tierAB)) return false;
+
+      const tierBA = userB.personalTiers[userA.id] || "Tier 1";
+      if (tierBA === "Blocked") return false;
+      if (!userB.willingTiers.includes(tierBA)) return false;
+
       return true;
     }
 
@@ -337,7 +329,7 @@
           </div>
         `;
 
-        // Show "Tier Assignment of Others" only for users in 'user.contacts'
+        // Show only the user’s contacts in "Tier Assignment of Others"
         cardHTML += `
           <div class="control-group">
             <label>${user.name}'s Tier Assignment of Others:</label>
@@ -345,7 +337,6 @@
         `;
         user.contacts.forEach(contactId => {
           const contactUser = users.find(u => u.id === contactId);
-          // If for some reason contactUser doesn't exist, skip
           if (!contactUser) return;
           const assignedTier = user.personalTiers[contactId] || "Tier 1";
           cardHTML += `
@@ -399,7 +390,7 @@
           }
         });
 
-        // Invite to Join Downtime button event
+        // Invite to Join Downtime
         const inviteJoinBtn = card.querySelector('.invite-join-btn');
         inviteJoinBtn.addEventListener('click', () => {
           showInviteJoinDowntimePanel(user);
@@ -420,7 +411,7 @@
       }
     }
 
-    // Notification helper
+    // Notifications
     function addNotification(message) {
       const note = document.createElement('div');
       note.classList.add('notification');
@@ -440,7 +431,7 @@
       usersArray.forEach(user => markUserUnavailable(user));
     }
 
-    // 1‑on‑1 Chat
+    // Start 1‑on‑1 Chat
     function startOneOnOneChat() {
       const availableUsers = users.filter(u => u.available);
       if (availableUsers.length < 2) {
@@ -460,18 +451,16 @@
         addNotification("Not enough connectable participants for a 1‑on‑1 chat.");
         return;
       }
-      const allowedTierValue = tierValues[initial.globalTier];
       currentChat = {
         type: "oneOnOne",
-        participants: [initial, partner],
-        allowedTierValue: allowedTierValue
+        participants: [initial, partner]
       };
       markUsersUnavailable([initial, partner]);
       addNotification(`1‑on‑1 Chat connected: ${initial.name} and ${partner.name}`);
       updateChatOptionsPanel();
     }
 
-    // Group Chat
+    // Start Group Chat
     function startGroupChat() {
       const availableUsers = users.filter(u => u.available);
       if (availableUsers.length < 2) {
@@ -479,7 +468,6 @@
         return;
       }
       const initial = availableUsers[0];
-      const allowedTierValue = tierValues[initial.globalTier];
       const participants = [initial];
       availableUsers.slice(1).forEach(candidate => {
         if (canConnect(initial, candidate)) {
@@ -492,8 +480,7 @@
       }
       currentChat = {
         type: "group",
-        participants: participants,
-        allowedTierValue: allowedTierValue
+        participants: participants
       };
       markUsersUnavailable(participants);
       addNotification(`Group chat connected: ${participants.map(u => u.name).join(", ")}`);
@@ -523,12 +510,13 @@
       document.getElementById("end-chat-btn").addEventListener("click", endChat);
     }
 
-    // Upgrade 1‑on‑1 chat to group
+    // Upgrade 1‑on‑1 to group
     function upgradeToGroupChat() {
       const availableUsers = users.filter(u => u.available && !currentChat.participants.some(p => p.id === u.id));
       const newParticipants = [];
+      const inviter = currentChat.participants[0];
       availableUsers.forEach(candidate => {
-        if (canConnect(currentChat.participants[0], candidate)) {
+        if (canConnect(inviter, candidate)) {
           newParticipants.push(candidate);
         }
       });
@@ -536,19 +524,19 @@
         addNotification("No additional users available to add to the group chat.");
         return;
       }
-      newParticipants.forEach(user => {
-        currentChat.participants.push(user);
-        markUserUnavailable(user);
+      newParticipants.forEach(u => {
+        currentChat.participants.push(u);
+        markUserUnavailable(u);
       });
       currentChat.type = "group";
       addNotification(`Group chat upgraded. Participants: ${currentChat.participants.map(u => u.name).join(", ")}`);
       updateChatOptionsPanel();
     }
 
-    // Invite to Chat (from contacts)
+    // Invite to Chat
     function showInviteToChatPanel() {
       const inviter = currentChat.participants[0];
-      // Only those in inviter's contacts, not already in chat
+      // Only from the inviter’s contacts, not already in chat
       const inviteOptions = users.filter(u => 
         inviter.contacts.includes(u.id) && 
         !currentChat.participants.some(p => p.id === u.id)
@@ -561,8 +549,8 @@
       html += `<form id="invite-chat-form">
                 <label for="inviteChatSelect">Select a contact:</label>
                 <select id="inviteChatSelect">`;
-      inviteOptions.forEach(user => {
-        html += `<option value="${user.id}">${user.name} (Global: ${user.globalTier})</option>`;
+      inviteOptions.forEach(u => {
+        html += `<option value="${u.id}">${u.name}</option>`;
       });
       html += `</select>
                 <button type="submit">Send Invite</button>
@@ -585,7 +573,7 @@
       });
     }
 
-    // "Invite to Join Downtime"
+    // Invite to Join Downtime
     function showInviteJoinDowntimePanel(inviter) {
       let html = `<h3>Invite to Join Downtime (Invited by ${inviter.name})</h3>`;
       html += `<p>Select invitation type:</p>
@@ -608,12 +596,12 @@
       });
     }
 
-    // Invite an existing user to join downtime (i.e. add to contacts)
+    // Invite an existing user
     function showExistingJoinDowntimeForm(inviter) {
-      // List users not in inviter's contacts
-      const options = users.filter(u => u.id !== inviter.id && !inviter.contacts.includes(u.id));
+      // Show all existing users except the inviter
+      const options = users.filter(u => u.id !== inviter.id);
       if (options.length === 0) {
-        addNotification("No existing users available for invitation.");
+        addNotification("No existing users found.");
         invitePanel.style.display = "none";
         return;
       }
@@ -621,8 +609,8 @@
       html += `<form id="existing-join-form">
                  <label for="existingUserSelect">Select a user:</label>
                  <select id="existingUserSelect">`;
-      options.forEach(user => {
-        html += `<option value="${user.id}">${user.name} (Global: ${user.globalTier})</option>`;
+      options.forEach(u => {
+        html += `<option value="${u.id}">${u.name}</option>`;
       });
       html += `</select>
                <button type="submit">Send Invite</button>
@@ -631,27 +619,35 @@
       document.getElementById("existing-join-form").addEventListener("submit", function(e) {
         e.preventDefault();
         const selectedId = parseInt(document.getElementById("existingUserSelect").value);
-        if (!inviter.contacts.includes(selectedId)) {
-          inviter.contacts.push(selectedId);
-        }
         const invitedUser = users.find(u => u.id === selectedId);
-        if (invitedUser && !invitedUser.contacts.includes(inviter.id)) {
-          invitedUser.contacts.push(inviter.id);
+        if (!invitedUser) {
+          addNotification("Invalid selection.");
+          return;
         }
-        // Initialize personal tier entries if needed
-        if (!inviter.personalTiers[selectedId]) {
-          inviter.personalTiers[selectedId] = personalTierOptions[Math.floor(Math.random() * personalTierOptions.length)];
+        // If the user is already a contact, do nothing
+        if (inviter.contacts.includes(selectedId)) {
+          addNotification(`${invitedUser.name} is already in ${inviter.name}'s contacts.`);
+        } else {
+          // Add them as contacts both ways
+          inviter.contacts.push(selectedId);
+          if (!invitedUser.contacts.includes(inviter.id)) {
+            invitedUser.contacts.push(inviter.id);
+          }
+          // Initialize personal tier if missing
+          if (!inviter.personalTiers[selectedId]) {
+            inviter.personalTiers[selectedId] = randomTier();
+          }
+          if (!invitedUser.personalTiers[inviter.id]) {
+            invitedUser.personalTiers[inviter.id] = randomTier();
+          }
+          addNotification(`${invitedUser.name} has been added to ${inviter.name}'s contacts.`);
         }
-        if (!invitedUser.personalTiers[inviter.id]) {
-          invitedUser.personalTiers[inviter.id] = personalTierOptions[Math.floor(Math.random() * personalTierOptions.length)];
-        }
-        addNotification(`${invitedUser.name} has been added to ${inviter.name}'s contacts.`);
         invitePanel.style.display = "none";
         renderUsers();
       });
     }
 
-    // Invite a new user to join downtime
+    // Invite a new user
     function showNewJoinDowntimeForm(inviter) {
       let html = `<h3>Invite New User to Join Downtime</h3>
                   <form id="new-join-form">
@@ -660,7 +656,7 @@
                       <input type="text" id="newUserName" required>
                     </div>
                     <div>
-                      <label for="newUserTier">Global Tier:</label>
+                      <label for="newUserTier">Which tier would you like to assign them?</label>
                       <select id="newUserTier">
                         <option value="Tier 1">Tier 1</option>
                         <option value="Tier 2">Tier 2</option>
@@ -675,51 +671,54 @@
       document.getElementById("new-join-form").addEventListener("submit", function(e) {
         e.preventDefault();
         const newName = document.getElementById("newUserName").value.trim();
-        const newTier = document.getElementById("newUserTier").value;
+        const chosenTier = document.getElementById("newUserTier").value;
         if (!newName) {
           addNotification("Name cannot be empty.");
           return;
         }
-        addNewUser(newName, newTier, inviter);
+        addNewUser(newName, chosenTier, inviter);
         invitePanel.style.display = "none";
         renderUsers();
       });
     }
 
-    // Add a new user to the board
-    // The new user's contacts list includes only the inviter
-    function addNewUser(name, globalTier, inviter) {
-      const newId = users.length ? Math.max(...users.map(u => u.id)) + 1 : 1;
+    // Add new user to the board
+    // The new user’s contacts list includes only the inviter
+    // The inviter assigns a personal tier for the new user based on chosenTier
+    function addNewUser(newName, chosenTier, inviter) {
+      const newId = users.length ? Math.max(...users.map(u => u.id)) + 1 : 3;
       const newUser = {
         id: newId,
-        name: name,
+        name: newName,
         available: true,
-        globalTier: globalTier,
-        willingTiers: ["Tier 1", "Tier 2", "Tier 3"],
+        willingTiers: ["Tier 1", "Tier 2", "Tier 3"], // open to all
         contacts: [inviter.id],
         personalTiers: {}
       };
-      // The inviter's contacts add this new user
-      if (!inviter.contacts.includes(newUser.id)) {
-        inviter.contacts.push(newUser.id);
-      }
-      // Initialize personal tiers between new user & inviter
-      newUser.personalTiers[inviter.id] = personalTierOptions[Math.floor(Math.random() * personalTierOptions.length)];
-      if (!inviter.personalTiers[newId]) {
-        inviter.personalTiers[newId] = personalTierOptions[Math.floor(Math.random() * personalTierOptions.length)];
-      }
-      // Add the new user to the global list
+      // The inviter's contacts add the new user
+      inviter.contacts.push(newId);
+      // The inviter sets personal tier for the new user
+      inviter.personalTiers[newId] = chosenTier;
+      // The new user sets personal tier for the inviter (random)
+      newUser.personalTiers[inviter.id] = randomTier();
+
+      // Add new user to global list
       users.push(newUser);
-      addNotification(`${name} has been added to the network as ${globalTier}. Their contacts list includes only ${inviter.name}.`);
+      addNotification(`${newName} has been added. ${inviter.name} placed them in "${chosenTier}". Their contacts list includes only ${inviter.name}.`);
     }
 
-    // End current chat
+    // Helper: get random tier from personalTierOptions
+    function randomTier() {
+      return personalTierOptions[Math.floor(Math.random() * personalTierOptions.length)];
+    }
+
+    // End chat
     function endChat() {
       if (!currentChat) return;
-      currentChat.participants.forEach(user => {
-        user.available = true;
-        updateUserCardStyle(user.id);
-        const checkbox = document.getElementById(`avail-${user.id}`);
+      currentChat.participants.forEach(u => {
+        u.available = true;
+        updateUserCardStyle(u.id);
+        const checkbox = document.getElementById(`avail-${u.id}`);
         if (checkbox) checkbox.checked = true;
       });
       currentChat = null;
@@ -727,7 +726,7 @@
       addNotification("Chat ended.");
     }
 
-    // Event listeners
+    // Event Listeners
     oneOnOneBtn.addEventListener('click', startOneOnOneChat);
     groupChatBtn.addEventListener('click', startGroupChat);
 
