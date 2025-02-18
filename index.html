@@ -1,42 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Downtime App Demo</title>
   <style>
+    /* Reset & Global Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-color: #f5f5f5;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f4f8;
+      color: #333;
+      line-height: 1.6;
     }
-    h1 {
+    header {
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      color: #fff;
+      padding: 20px;
       text-align: center;
+      margin-bottom: 20px;
     }
+    header h1 {
+      font-size: 2em;
+    }
+    #container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px 40px;
+    }
+    /* User Cards */
     #user-network {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 15px;
-      margin-bottom: 20px;
+      gap: 20px;
+      margin-bottom: 30px;
     }
     .user-card {
       background: #fff;
-      border: 2px solid #ccc;
-      border-radius: 8px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       padding: 15px;
-      width: 200px;
-      box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
-      transition: border-color 0.3s;
+      width: 220px;
+      transition: transform 0.3s;
+    }
+    .user-card:hover {
+      transform: translateY(-5px);
     }
     .user-card.available {
-      border-color: #28a745;
+      border-left: 5px solid #28a745;
     }
     .user-card.unavailable {
-      border-color: #ccc;
-      opacity: 0.6;
+      border-left: 5px solid #ccc;
+      opacity: 0.8;
     }
     .user-card h3 {
-      margin-top: 0;
       margin-bottom: 10px;
       font-size: 1.2em;
     }
@@ -45,29 +66,96 @@
     }
     label {
       display: block;
-      font-weight: bold;
+      font-size: 0.9em;
       margin-bottom: 5px;
     }
-    select,
-    input[type="checkbox"] {
+    select, input[type="checkbox"] {
       width: 100%;
       padding: 5px;
-      font-size: 1em;
+      border-radius: 5px;
+      border: 1px solid #ccc;
     }
-    #group-chat-btn {
-      display: block;
-      margin: 0 auto 20px;
+    /* Chat Buttons */
+    #chat-buttons {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    #chat-buttons button {
+      margin: 5px;
       padding: 10px 20px;
       font-size: 1em;
-      background: #007bff;
-      color: #fff;
       border: none;
       border-radius: 5px;
       cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      transition: background 0.3s;
+    }
+    #one-on-one-btn {
+      background: #28a745;
+      color: #fff;
+    }
+    #group-chat-btn {
+      background: #007bff;
+      color: #fff;
+    }
+    #one-on-one-btn:hover {
+      background: #218838;
     }
     #group-chat-btn:hover {
-      background: #0056b3;
+      background: #0069d9;
     }
+    /* Chat Options Panel */
+    #chat-options-panel, #invite-panel {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 15px;
+      max-width: 600px;
+      margin: 0 auto 30px;
+    }
+    #chat-options-panel h3,
+    #invite-panel h3 {
+      margin-bottom: 10px;
+    }
+    #chat-options-panel p {
+      margin-bottom: 15px;
+    }
+    #chat-options-panel button,
+    #invite-panel button {
+      margin: 5px;
+      padding: 8px 16px;
+      font-size: 0.9em;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #upgrade-btn {
+      background: #ffc107;
+      color: #333;
+    }
+    #upgrade-btn:hover {
+      background: #e0a800;
+    }
+    #invite-btn {
+      background: #17a2b8;
+      color: #fff;
+    }
+    #invite-btn:hover {
+      background: #138496;
+    }
+    #end-chat-btn {
+      background: #dc3545;
+      color: #fff;
+    }
+    #end-chat-btn:hover {
+      background: #c82333;
+    }
+    /* Invite Panel */
+    #invite-panel div {
+      margin-bottom: 8px;
+    }
+    /* Notifications */
     #notifications {
       max-width: 600px;
       margin: 0 auto;
@@ -77,59 +165,40 @@
       border-left: 5px solid #007bff;
       padding: 10px 15px;
       margin-bottom: 10px;
-      box-shadow: 1px 1px 5px rgba(0,0,0,0.1);
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
   </style>
 </head>
 <body>
-  <h1>Downtime App Demo</h1>
-  <div id="user-network"></div>
-  <button id="group-chat-btn">Initiate Group Chat Request</button>
-  <div id="notifications"></div>
+  <header>
+    <h1>Downtime App Demo</h1>
+  </header>
+  <div id="container">
+    <div id="user-network"></div>
+    <div id="chat-buttons">
+      <button id="one-on-one-btn">Start 1‑on‑1 Chat</button>
+      <button id="group-chat-btn">Initiate Group Chat</button>
+    </div>
+    <div id="chat-options-panel" style="display:none;"></div>
+    <div id="invite-panel" style="display:none;"></div>
+    <div id="notifications"></div>
+  </div>
 
   <script>
     /**********************************************************************
-     * Downtime App Rules & Logic
+     * Downtime App Rules & Logic (Enhanced Demo)
      *
-     * 1. Availability Logic
-     *    - Available Button: User toggles status to “Available.”
-     *    - Availability Duration Options (not fully simulated):
-     *         • Specific Timeframe (e.g., 15 mins, 1 hour)
-     *         • Manual Off: User remains available until manually turned off.
-     *         • Pre-Scheduled Availability (not simulated)
-     *         • Post-Connection Unavailability: After connection, users are marked unavailable.
-     *
-     *    User Interface Messages:
-     *         • “No one in your network is available right now. Try again later!”
-     *         • “Your availability has ended. Set a new availability when you’re ready to chat!”
-     *
-     * 2. Network Management & Tiers
-     *    - Each user has a tier assignment:
-     *         • Tier 1 (High Priority)
-     *         • Tier 2 (Medium Priority)
-     *         • Tier 3 (Low Priority)
-     *         • Blocked: Never matched or notified.
-     *    - Tier Assignments Are Private.
-     *    - Generic messaging is used to avoid revealing tier placement.
-     *
-     * 3. Connection Flow & Group Chat Logic
-     *    - Initial Connection Sets Minimum Tier:
-     *         • The first available (non-blocked) user becomes the initial connection.
-     *         • Their tier sets the “allowed” threshold (only users with an equal or higher priority tier join).
-     *         • Example: If initial connection is Tier 2, only Tier 1 and Tier 2 contacts are added.
-     *    - Blocked users are excluded.
-     *
-     * 4. Manual Chat/Call Requests (Simplified in this demo)
-     *    - Manual invitations can be simulated; blocked users are silently excluded.
-     *
-     * 5. General Privacy & Randomization Logic (Simplified)
-     *    - Consistent generic messaging is used for failures.
-     *
-     * 6. Notifications & Messaging Logic
-     *    - Notifications for successful connections, blocked additions, and unavailability.
+     * Core features:
+     * 1. User Network: 7 sample users with name, availability toggle, and tier assignment.
+     * 2. Chat Options: Choose either 1‑on‑1 or group chat.
+     * 3. Once a 1‑on‑1 chat connects, a panel appears offering:
+     *     - Upgrade to Group Chat (adds additional available users based on tier rules)
+     *     - Invite Specific People (choose from available users)
+     * 4. After any chat connection, connected users are marked unavailable.
+     * 5. Notifications provide real-time feedback.
      **********************************************************************/
 
-    // Sample users with default settings
     const users = [
       { id: 1, name: 'Alice', available: false, tier: 'Tier 1' },
       { id: 2, name: 'Bob', available: false, tier: 'Tier 2' },
@@ -144,26 +213,28 @@
       "Tier 1": 1,
       "Tier 2": 2,
       "Tier 3": 3,
-      "Blocked": Infinity // Blocked users are given an infinite value to always fail allowed checks
+      "Blocked": Infinity
     };
 
+    // Global chat state: currentChat = { type, participants, allowedTierValue }
+    let currentChat = null;
+
+    // DOM Elements
     const userNetworkEl = document.getElementById('user-network');
     const notificationsEl = document.getElementById('notifications');
+    const oneOnOneBtn = document.getElementById('one-on-one-btn');
     const groupChatBtn = document.getElementById('group-chat-btn');
+    const chatOptionsPanel = document.getElementById('chat-options-panel');
+    const invitePanel = document.getElementById('invite-panel');
 
-    // Render the user cards
+    // Render user cards
     function renderUsers() {
       userNetworkEl.innerHTML = "";
       users.forEach(user => {
         const card = document.createElement('div');
         card.classList.add('user-card');
         card.id = `user-${user.id}`;
-        if (user.available) {
-          card.classList.add('available');
-        } else {
-          card.classList.add('unavailable');
-        }
-
+        card.classList.add(user.available ? 'available' : 'unavailable');
         card.innerHTML = `
           <h3>${user.name}</h3>
           <div class="control-group">
@@ -180,25 +251,20 @@
             </select>
           </div>
         `;
-
-        // Availability toggle event
+        // Event Listeners for toggle and tier change
         const availCheckbox = card.querySelector(`#avail-${user.id}`);
         availCheckbox.addEventListener('change', (e) => {
           user.available = e.target.checked;
           updateUserCardStyle(user.id);
         });
-
-        // Tier assignment event
         const tierSelect = card.querySelector(`#tier-${user.id}`);
         tierSelect.addEventListener('change', (e) => {
           user.tier = e.target.value;
         });
-
         userNetworkEl.appendChild(card);
       });
     }
 
-    // Update the visual style for a user card based on availability
     function updateUserCardStyle(userId) {
       const user = users.find(u => u.id === userId);
       const card = document.getElementById(`user-${userId}`);
@@ -211,66 +277,203 @@
       }
     }
 
-    // Function to add a notification message
     function addNotification(message) {
       const note = document.createElement('div');
       note.classList.add('notification');
-      note.textContent = message;
+      note.innerHTML = message;
       notificationsEl.prepend(note);
-      // Auto-remove notification after 5 seconds
-      setTimeout(() => {
-        note.remove();
-      }, 5000);
+      setTimeout(() => note.remove(), 5000);
     }
 
-    // Group Chat Request Simulation
-    groupChatBtn.addEventListener('click', () => {
-      // Filter available users who are not blocked
-      const availableUsers = users.filter(user => user.available && user.tier !== "Blocked");
-      
+    // Helper functions to mark users as unavailable
+    function markUserUnavailable(user) {
+      user.available = false;
+      const checkbox = document.getElementById(`avail-${user.id}`);
+      if (checkbox) checkbox.checked = false;
+      updateUserCardStyle(user.id);
+    }
+    function markUsersUnavailable(usersArray) {
+      usersArray.forEach(user => markUserUnavailable(user));
+    }
+
+    // 1‑on‑1 Chat: Select first available user and then a partner meeting tier rules.
+    function startOneOnOneChat() {
+      const availableUsers = users.filter(u => u.available && u.tier !== "Blocked");
       if (availableUsers.length < 2) {
         addNotification("No one in your network is available right now. Try again later!");
         return;
       }
-      
-      // The first available user is chosen as the initial connection
-      const initialConnection = availableUsers[0];
-      const allowedTierValue = tierValues[initialConnection.tier];
-      const participants = [initialConnection];
-      let blockedNotifications = "";
-      
-      // Evaluate other available users based on tier restrictions
+      const initial = availableUsers[0];
+      const allowedTierValue = tierValues[initial.tier];
+      let partner = null;
+      for (let i = 1; i < availableUsers.length; i++) {
+        if (tierValues[availableUsers[i].tier] <= allowedTierValue) {
+          partner = availableUsers[i];
+          break;
+        }
+      }
+      if (!partner) {
+        addNotification("Not enough participants to form a 1‑on‑1 chat.");
+        return;
+      }
+      currentChat = {
+        type: "oneOnOne",
+        participants: [initial, partner],
+        allowedTierValue: allowedTierValue
+      };
+      markUsersUnavailable([initial, partner]);
+      addNotification(`1‑on‑1 Chat connected: ${initial.name} and ${partner.name}`);
+      updateChatOptionsPanel();
+    }
+
+    // Group Chat: Automatically add all available users meeting the allowed tier.
+    function startGroupChat() {
+      const availableUsers = users.filter(u => u.available && u.tier !== "Blocked");
+      if (availableUsers.length < 2) {
+        addNotification("No one in your network is available right now. Try again later!");
+        return;
+      }
+      const initial = availableUsers[0];
+      const allowedTierValue = tierValues[initial.tier];
+      const participants = [initial];
       availableUsers.slice(1).forEach(user => {
         if (tierValues[user.tier] <= allowedTierValue) {
           participants.push(user);
-        } else {
-          blockedNotifications += `• ${user.name} (Tier: ${user.tier}) was excluded due to tier restrictions.<br>`;
         }
       });
-      
-      // If only one participant qualifies, we do not form a group chat.
       if (participants.length < 2) {
         addNotification("Not enough participants to form a group chat.");
         return;
       }
-      
-      // Show notifications for successful connections and any exclusions.
-      const participantNames = participants.map(u => u.name).join(", ");
-      addNotification(`Group chat connected: ${participantNames}`);
-      if (blockedNotifications) {
-        addNotification(`Some participants were excluded:<br>${blockedNotifications}`);
-      }
-      
-      // Post-connection: mark all connected users as unavailable.
-      participants.forEach(user => {
-        user.available = false;
-        const checkbox = document.getElementById(`avail-${user.id}`);
-        if (checkbox) checkbox.checked = false;
-        updateUserCardStyle(user.id);
-      });
-    });
+      currentChat = {
+        type: "group",
+        participants: participants,
+        allowedTierValue: allowedTierValue
+      };
+      markUsersUnavailable(participants);
+      addNotification(`Group chat connected: ${participants.map(u => u.name).join(", ")}`);
+      updateChatOptionsPanel();
+    }
 
-    // Initial render of users
+    // Display Chat Options Panel (for active chats)
+    function updateChatOptionsPanel() {
+      if (!currentChat) {
+        chatOptionsPanel.style.display = "none";
+        return;
+      }
+      let html = `<h3>Active Chat (${currentChat.type === "oneOnOne" ? "1‑on‑1" : "Group"})</h3>`;
+      html += `<p>Participants: ${currentChat.participants.map(u => u.name).join(", ")}</p>`;
+      // For 1‑on‑1 chats, offer an upgrade option.
+      if (currentChat.type === "oneOnOne") {
+        html += `<button id="upgrade-btn">Upgrade to Group Chat</button>`;
+      }
+      html += `<button id="invite-btn">Invite Specific People</button>`;
+      html += `<button id="end-chat-btn">End Chat</button>`;
+      chatOptionsPanel.innerHTML = html;
+      chatOptionsPanel.style.display = "block";
+
+      if (document.getElementById("upgrade-btn")) {
+        document.getElementById("upgrade-btn").addEventListener("click", upgradeToGroupChat);
+      }
+      document.getElementById("invite-btn").addEventListener("click", showInvitePanel);
+      document.getElementById("end-chat-btn").addEventListener("click", endChat);
+    }
+
+    // Upgrade a 1‑on‑1 chat to group by automatically adding available users.
+    function upgradeToGroupChat() {
+      const availableUsers = users.filter(u => u.available && u.tier !== "Blocked" && 
+                                !currentChat.participants.some(p => p.id === u.id));
+      const newParticipants = [];
+      availableUsers.forEach(user => {
+        if (tierValues[user.tier] <= currentChat.allowedTierValue) {
+          newParticipants.push(user);
+        }
+      });
+      if (newParticipants.length === 0) {
+        addNotification("No additional users available to add to the group chat.");
+        return;
+      }
+      newParticipants.forEach(user => {
+        currentChat.participants.push(user);
+        markUserUnavailable(user);
+      });
+      currentChat.type = "group"; // Now a group chat
+      addNotification(`Group chat upgraded. Participants: ${currentChat.participants.map(u => u.name).join(", ")}`);
+      updateChatOptionsPanel();
+    }
+
+    // Show panel to invite specific people (list available users not already in chat)
+    function showInvitePanel() {
+      const availableInvitees = users.filter(u => u.available && u.tier !== "Blocked" && 
+                                      !currentChat.participants.some(p => p.id === u.id));
+      if (availableInvitees.length === 0) {
+        addNotification("No additional users available for invitation.");
+        return;
+      }
+      let html = "<h3>Invite Specific People</h3>";
+      availableInvitees.forEach(user => {
+        html += `<div>
+                   <input type="checkbox" id="invite-${user.id}" value="${user.id}">
+                   <label for="invite-${user.id}">${user.name} (Tier: ${user.tier})</label>
+                 </div>`;
+      });
+      html += '<button id="send-invites-btn">Send Invites</button>';
+      invitePanel.innerHTML = html;
+      invitePanel.style.display = "block";
+
+      document.getElementById("send-invites-btn").addEventListener("click", () => {
+        const checkboxes = invitePanel.querySelectorAll('input[type="checkbox"]');
+        const invitedUsers = [];
+        checkboxes.forEach(chk => {
+          if (chk.checked) {
+            const userId = parseInt(chk.value);
+            const user = users.find(u => u.id === userId);
+            if (user) {
+              invitedUsers.push(user);
+            }
+          }
+        });
+        let successInvites = [];
+        let failedInvites = [];
+        invitedUsers.forEach(user => {
+          if (tierValues[user.tier] <= currentChat.allowedTierValue) {
+            currentChat.participants.push(user);
+            markUserUnavailable(user);
+            successInvites.push(user.name);
+          } else {
+            failedInvites.push(user.name);
+          }
+        });
+        if (successInvites.length > 0) {
+          addNotification(`Invited: ${successInvites.join(", ")}`);
+        }
+        if (failedInvites.length > 0) {
+          addNotification(`Could not invite (tier restrictions): ${failedInvites.join(", ")}`);
+        }
+        invitePanel.style.display = "none";
+        updateChatOptionsPanel();
+      });
+    }
+
+    // End current chat: mark participants available again and reset the chat state.
+    function endChat() {
+      if (!currentChat) return;
+      currentChat.participants.forEach(user => {
+        user.available = true;
+        updateUserCardStyle(user.id);
+        const checkbox = document.getElementById(`avail-${user.id}`);
+        if (checkbox) checkbox.checked = true;
+      });
+      currentChat = null;
+      chatOptionsPanel.style.display = "none";
+      addNotification("Chat ended.");
+    }
+
+    // Event Listeners for chat initiation
+    oneOnOneBtn.addEventListener('click', startOneOnOneChat);
+    groupChatBtn.addEventListener('click', startGroupChat);
+
+    // Initial render of user cards
     renderUsers();
   </script>
 </body>
