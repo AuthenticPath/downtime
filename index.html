@@ -110,6 +110,19 @@
     .invite-chat-btn:hover {
       background: #138496;
     }
+    /* Delete Button */
+    .delete-user-btn {
+      background: #dc3545;
+      color: #fff;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .delete-user-btn:hover {
+      background: #c82333;
+    }
     /* Chat Buttons */
     #chat-buttons {
       text-align: center;
@@ -139,7 +152,7 @@
     #group-chat-btn:hover {
       background: #0069d9;
     }
-    /* Chat Options Panel */
+    /* Chat Options & Invite Panels */
     #chat-options-panel, #invite-panel {
       background: #fff;
       border-radius: 10px;
@@ -230,19 +243,21 @@
 
   <script>
     /**********************************************************************
-     * Downtime App (No Global Tiers – All Tiers Are Personal)
+     * Downtime App (Personal Tiers Only)
      *
-     * 1. Two initial users (Alice & Bob) start with each other in their contacts,
-     *    and their Tier Assignment of Others panels show only their contacts.
-     *    Both are set to Tier 1 for each other.
+     * - Two initial users (Alice & Bob) start with each other as contacts.
+     *   Their "Tier Assignment of Others" panels show only their contacts,
+     *   and they are both set to Tier 1 for each other.
      *
-     * 2. Invite flows now let you cancel or go back one level.
+     * - The "Invite to Join Downtime" flow is now renamed to "Add Friend"
+     *   (i.e. add a friend to your contact list) with a revised UI.
      *
-     * 3. The "Invite to Join Downtime" dialog now uses two buttons (Invite Existing / Invite New)
-     *    instead of radio buttons.
+     * - You can delete a user from the board. When a user is deleted, they
+     *   are removed from everyone’s contacts (simulating an uninstall).
+     *   A confirmation dialog is shown before deletion.
      **********************************************************************/
 
-    // Two initial users: Alice & Bob with each other as Tier 1.
+    // Two initial users: Alice & Bob, both with each other as Tier 1.
     const users = [
       {
         id: 1,
@@ -250,7 +265,7 @@
         available: false,
         willingTiers: ["Tier 1", "Tier 2", "Tier 3"],
         contacts: [2],
-        personalTiers: {} // will be set in initPersonalTiers
+        personalTiers: {} // will be set below
       },
       {
         id: 2,
@@ -258,11 +273,11 @@
         available: false,
         willingTiers: ["Tier 1", "Tier 2", "Tier 3"],
         contacts: [1],
-        personalTiers: {} // will be set in initPersonalTiers
+        personalTiers: {} // will be set below
       }
     ];
 
-    // For every relationship, default tier is "Tier 1"
+    // Initialize each user's personal tier assignments for their contacts to "Tier 1"
     function initPersonalTiers() {
       users.forEach(user => {
         user.contacts.forEach(contactId => {
@@ -296,7 +311,7 @@
       return true;
     }
 
-    // Render user cards: "Tier Assignment of Others" only shows contacts.
+    // Render user cards (only show contacts in "Tier Assignment of Others")
     function renderUsers() {
       userNetworkEl.innerHTML = "";
       users.forEach(user => {
@@ -324,7 +339,7 @@
           </div>
         `;
 
-        // Only display contacts in "Tier Assignment of Others"
+        // "Tier Assignment of Others" shows only contacts
         cardHTML += `
           <div class="control-group">
             <label>${user.name}'s Tier Assignment of Others:</label>
@@ -348,8 +363,10 @@
         });
         cardHTML += `</div></div>`;
 
-        // Add "Invite to Join Downtime" button on each card.
-        cardHTML += `<button class="invite-join-btn" data-userid="${user.id}">Invite to Join Downtime</button>`;
+        // "Add Friend" button (to add a friend to your contacts)
+        cardHTML += `<button class="invite-join-btn" data-userid="${user.id}">Add Friend</button>`;
+        // "Remove User" button (to delete a user)
+        cardHTML += `<button class="delete-user-btn" data-userid="${user.id}">Remove User</button>`;
         card.innerHTML = cardHTML;
         userNetworkEl.appendChild(card);
 
@@ -380,11 +397,15 @@
             });
           }
         });
-
-        // "Invite to Join Downtime" button event
+        // "Add Friend" button event
         const inviteJoinBtn = card.querySelector('.invite-join-btn');
         inviteJoinBtn.addEventListener('click', () => {
           showInviteJoinDowntimePanel(user);
+        });
+        // "Remove User" button event
+        const deleteBtn = card.querySelector('.delete-user-btn');
+        deleteBtn.addEventListener('click', () => {
+          deleteUser(user.id);
         });
       });
     }
@@ -411,18 +432,33 @@
       setTimeout(() => note.remove(), 5000);
     }
 
-    // Mark users as unavailable
-    function markUserUnavailable(user) {
-      user.available = false;
-      const checkbox = document.getElementById(`avail-${user.id}`);
-      if (checkbox) checkbox.checked = false;
-      updateUserCardStyle(user.id);
-    }
-    function markUsersUnavailable(usersArray) {
-      usersArray.forEach(u => markUserUnavailable(u));
+    // Delete a user from the board and remove from all contacts
+    function deleteUser(userId) {
+      if (!confirm("Are you sure you want to remove this user?")) return;
+      const index = users.findIndex(u => u.id === userId);
+      if (index === -1) return;
+      const removedUser = users.splice(index, 1)[0];
+      // Remove removed user from all contacts and personalTiers of remaining users.
+      users.forEach(u => {
+        u.contacts = u.contacts.filter(cid => cid !== userId);
+        delete u.personalTiers[userId];
+      });
+      // Also remove from current chat if present.
+      if (currentChat) {
+        currentChat.participants = currentChat.participants.filter(u => u.id !== userId);
+        if (currentChat.participants.length === 0) {
+          currentChat = null;
+          chatOptionsPanel.style.display = "none";
+          addNotification("Chat ended due to user removal.");
+        } else {
+          updateChatOptionsPanel();
+        }
+      }
+      addNotification(`${removedUser.name} has been removed from the network.`);
+      renderUsers();
     }
 
-    // 1‑on‑1 Chat
+    // Start 1‑on‑1 Chat
     function startOneOnOneChat() {
       const availableUsers = users.filter(u => u.available);
       if (availableUsers.length < 2) {
@@ -451,7 +487,7 @@
       updateChatOptionsPanel();
     }
 
-    // Group Chat
+    // Start Group Chat
     function startGroupChat() {
       const availableUsers = users.filter(u => u.available);
       if (availableUsers.length < 2) {
@@ -486,7 +522,7 @@
       }
       let html = `<h3>Active Chat (${currentChat.type === "oneOnOne" ? "1‑on‑1" : "Group"})</h3>`;
       html += `<p>Participants: ${currentChat.participants.map(u => u.name).join(", ")}</p>`;
-      if (currentChat.type === "oneOn‑one") {
+      if (currentChat.type === "oneOnOne") {
         html += `<button id="upgrade-btn">Upgrade to Group Chat</button>`;
       }
       html += `<button id="invite-chat-btn" class="invite-chat-btn">Invite to Chat</button>`;
@@ -501,7 +537,7 @@
       document.getElementById("end-chat-btn").addEventListener("click", endChat);
     }
 
-    // Upgrade 1‑on‑1 to group
+    // Upgrade 1‑on‑1 to Group Chat
     function upgradeToGroupChat() {
       const availableUsers = users.filter(u => u.available && !currentChat.participants.some(p => p.id === u.id));
       const newParticipants = [];
@@ -567,12 +603,12 @@
       });
     }
 
-    // Invite to Join Downtime – NEW UI with two buttons and a Cancel button.
+    // "Add Friend" (formerly Invite to Join Downtime)
     function showInviteJoinDowntimePanel(inviter) {
-      let html = `<h3>Invite to Join Downtime (Invited by ${inviter.name})</h3>`;
+      let html = `<h3>Add a Friend to Your Contacts (Invited by ${inviter.name})</h3>`;
       html += `<p>Choose invitation type:</p>`;
-      html += `<button id="invite-existing-btn">Invite Existing</button>`;
-      html += `<button id="invite-new-btn">Invite New</button>`;
+      html += `<button id="invite-existing-btn">Add Existing Friend</button>`;
+      html += `<button id="invite-new-btn">Add New Friend</button>`;
       html += `<button id="invite-cancel-btn" class="cancel-btn">Cancel</button>`;
       invitePanel.innerHTML = html;
       invitePanel.style.display = "block";
@@ -587,7 +623,7 @@
       });
     }
 
-    // Invite Existing – show dropdown of all existing users (except inviter)
+    // Add an existing friend to contacts (show dropdown of all existing users except inviter)
     function showExistingJoinDowntimeForm(inviter) {
       const options = users.filter(u => u.id !== inviter.id);
       if (options.length === 0) {
@@ -595,7 +631,7 @@
         invitePanel.style.display = "none";
         return;
       }
-      let html = "<h3>Invite Existing User to Join Downtime</h3>";
+      let html = "<h3>Add Existing Friend</h3>";
       html += `<form id="existing-join-form">
                  <label for="existingUserSelect">Select a user:</label>
                  <select id="existingUserSelect">`;
@@ -603,7 +639,7 @@
         html += `<option value="${u.id}">${u.name}</option>`;
       });
       html += `</select>
-               <button type="submit">Send Invite</button>
+               <button type="submit">Add Friend</button>
                <button type="button" id="existing-join-cancel" class="cancel-btn">Cancel</button>
                </form>`;
       invitePanel.innerHTML = html;
@@ -622,7 +658,6 @@
           if (!invitedUser.contacts.includes(inviter.id)) {
             invitedUser.contacts.push(inviter.id);
           }
-          // Default new relationship to Tier 1
           inviter.personalTiers[selectedId] = "Tier 1";
           invitedUser.personalTiers[inviter.id] = "Tier 1";
           addNotification(`${invitedUser.name} has been added to ${inviter.name}'s contacts.`);
@@ -635,9 +670,10 @@
       });
     }
 
-    // Invite New – ask inviter which tier to assign the new user
+    // Add a new friend to contacts. Instead of asking for a global tier, ask the inviter
+    // which tier they want to assign the new friend.
     function showNewJoinDowntimeForm(inviter) {
-      let html = `<h3>Invite New User to Join Downtime</h3>
+      let html = `<h3>Add New Friend</h3>
                   <form id="new-join-form">
                     <div>
                       <label for="newUserName">Name:</label>
@@ -652,7 +688,7 @@
                         <option value="Blocked">Blocked</option>
                       </select>
                     </div>
-                    <button type="submit">Add New User</button>
+                    <button type="submit">Add New Friend</button>
                     <button type="button" id="new-join-cancel" class="cancel-btn">Cancel</button>
                   </form>`;
       invitePanel.innerHTML = html;
@@ -674,7 +710,8 @@
       });
     }
 
-    // Add new user: new user's contacts include only the inviter.
+    // Add new friend: new user's contacts list includes only the inviter.
+    // The inviter assigns a personal tier to the new friend.
     function addNewUser(newName, chosenTier, inviter) {
       const newId = users.length ? Math.max(...users.map(u => u.id)) + 1 : 3;
       const newUser = {
@@ -685,7 +722,6 @@
         contacts: [inviter.id],
         personalTiers: {}
       };
-      // Add new user to inviter's contacts and set tiers to Tier 1 by default.
       inviter.contacts.push(newId);
       inviter.personalTiers[newId] = chosenTier;
       newUser.personalTiers[inviter.id] = "Tier 1";
@@ -693,7 +729,7 @@
       addNotification(`${newName} has been added. ${inviter.name} placed them in "${chosenTier}". Their contacts list includes only ${inviter.name}.`);
     }
 
-    // End chat
+    // End Chat
     function endChat() {
       if (!currentChat) return;
       currentChat.participants.forEach(u => {
@@ -707,7 +743,7 @@
       addNotification("Chat ended.");
     }
 
-    // Event Listeners for chat buttons
+    // Event Listeners for Chat Buttons
     oneOnOneBtn.addEventListener('click', startOneOnOneChat);
     groupChatBtn.addEventListener('click', startGroupChat);
 
