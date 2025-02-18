@@ -581,32 +581,33 @@
       renderUsers();
     }
 
-    // Start 1‑on‑1 Chat
+    // Start 1‑on‑1 Chat with randomized pair selection
     function startOneOnOneChat() {
       const availableUsers = users.filter(u => u.available);
       if (availableUsers.length < 2) {
         addNotification("No one in your network is available right now. Try again later!");
         return;
       }
-      const initial = availableUsers[0];
-      let partner = null;
-      for (let i = 1; i < availableUsers.length; i++) {
-        const candidate = availableUsers[i];
-        if (canConnect(initial, candidate)) {
-          partner = candidate;
-          break;
+      let eligiblePairs = [];
+      for (let i = 0; i < availableUsers.length; i++) {
+        for (let j = i + 1; j < availableUsers.length; j++) {
+          if (canConnect(availableUsers[i], availableUsers[j])) {
+            eligiblePairs.push([availableUsers[i], availableUsers[j]]);
+          }
         }
       }
-      if (!partner) {
+      if (eligiblePairs.length === 0) {
         addNotification("Not enough connectable participants for a 1‑on‑1 chat.");
         return;
       }
+      // Randomly select one eligible pair.
+      const randomPair = eligiblePairs[Math.floor(Math.random() * eligiblePairs.length)];
       currentChat = {
         type: "oneOnOne",
-        participants: [initial, partner]
+        participants: randomPair
       };
-      markUsersUnavailable([initial, partner]);
-      addNotification(`1‑on‑1 Chat connected: ${initial.name} and ${partner.name}`);
+      markUsersUnavailable(randomPair);
+      addNotification(`1‑on‑1 Chat connected: ${randomPair[0].name} and ${randomPair[1].name}`);
       updateChatOptionsPanel();
     }
 
@@ -646,7 +647,8 @@
       let html = `<h3>Active Chat (${currentChat.type === "oneOnOne" ? "1‑on‑1" : "Group"})</h3>`;
       html += `<p>Participants: ${currentChat.participants.map(u => u.name).join(", ")}</p>`;
       if (currentChat.type === "oneOnOne") {
-        html += `<button id="upgrade-btn">Upgrade to Group Chat</button>`;
+        // Changed language to "Start a Group Chat"
+        html += `<button id="upgrade-btn">Start a Group Chat</button>`;
       }
       html += `<button id="invite-chat-btn" class="invite-chat-btn">Invite to Chat</button>`;
       html += `<button id="end-chat-btn">End Chat</button>`;
@@ -660,7 +662,7 @@
       document.getElementById("end-chat-btn").addEventListener("click", endChat);
     }
 
-    // Upgrade 1‑on‑1 to Group Chat
+    // Upgrade 1‑on‑1 to Group Chat (renamed to Start a Group Chat)
     function upgradeToGroupChat() {
       const availableUsers = users.filter(u => u.available && !currentChat.participants.some(p => p.id === u.id));
       const newParticipants = [];
@@ -679,7 +681,7 @@
         markUserUnavailable(u);
       });
       currentChat.type = "group";
-      addNotification(`Group chat upgraded. Participants: ${currentChat.participants.map(u => u.name).join(", ")}`);
+      addNotification(`Group chat started. Participants: ${currentChat.participants.map(u => u.name).join(", ")}`);
       updateChatOptionsPanel();
     }
 
