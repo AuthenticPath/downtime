@@ -237,8 +237,9 @@
      * 3. Contacts:
      *    - Sample users are pre-initialized with all other sample users as contacts.
      *    - When a new user is invited to join Downtime, their contacts list is set
-     *      to only include the person who invited them. That inviter also gets the
-     *      new person added to their contacts.
+     *      to include only the person who invited them. Also, only that inviter’s
+     *      contacts list is updated to include the new user. No one else gains the
+     *      new user in their contacts.
      *
      * 4. Invites:
      *    - “Invite to Chat” (in active chat) shows a form to invite from existing
@@ -258,13 +259,12 @@
       { id: 7, name: 'George', available: false, willingTiers: ["Tier 1", "Tier 2", "Tier 3"] }
     ];
 
-    // For simplicity, assign each sample user's contacts as all other sample users.
+    // For sample users, assign contacts as all other sample users.
     users.forEach(user => {
       user.contacts = users.filter(u => u.id !== user.id).map(u => u.id);
     });
 
     // Global matching uses each user's (non-editable) global tier.
-    // We'll set a default global tier for sample users.
     const defaultGlobalTier = {
       "Alice": "Tier 1",
       "Bob": "Tier 2",
@@ -369,7 +369,6 @@
           }
         });
         cardHTML += `</div></div>`;
-
         // Add "Invite to Join Downtime" button on each user card.
         cardHTML += `<button class="invite-join-btn" data-userid="${user.id}">Invite to Join Downtime</button>`;
         card.innerHTML = cardHTML;
@@ -519,7 +518,7 @@
       if (currentChat.type === "oneOnOne") {
         html += `<button id="upgrade-btn">Upgrade to Group Chat</button>`;
       }
-      // New button: Invite to Chat (only from contacts).
+      // "Invite to Chat" button (only from contacts).
       html += `<button id="invite-chat-btn" class="invite-chat-btn">Invite to Chat</button>`;
       html += `<button id="end-chat-btn">End Chat</button>`;
       chatOptionsPanel.innerHTML = html;
@@ -638,7 +637,7 @@
       document.getElementById("existing-join-form").addEventListener("submit", function(e) {
         e.preventDefault();
         const selectedId = parseInt(document.getElementById("existingUserSelect").value);
-        // Add the selected user to inviter's contacts (if not already there) and vice versa.
+        // Only update the inviter's contacts and the invited user's contacts.
         if (!inviter.contacts.includes(selectedId)) {
           inviter.contacts.push(selectedId);
         }
@@ -685,7 +684,9 @@
       });
     }
 
-    // Add a new user to the board. The new user's contacts list will include only the inviter.
+    // Add a new user to the board.
+    // IMPORTANT: The new user's contacts list is set to include ONLY the inviter.
+    // Also, no existing user's contacts list is updated to include the new user.
     function addNewUser(name, globalTier, inviter) {
       const newId = users.length ? Math.max(...users.map(u => u.id)) + 1 : 1;
       const newUser = {
@@ -704,7 +705,7 @@
         existingUser.personalTiers[newUser.id] = personalTierOptions[Math.floor(Math.random() * personalTierOptions.length)];
       });
       users.push(newUser);
-      // Also, add the new user to the inviter's contacts.
+      // Only add the new user to the inviter's contacts.
       if (!inviter.contacts.includes(newUser.id)) {
         inviter.contacts.push(newUser.id);
       }
