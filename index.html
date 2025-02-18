@@ -224,6 +224,31 @@
       border-radius: 5px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
+    /* Instructions Dialog */
+    #instructions-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      display: none;
+    }
+    #instructions-dialog {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      z-index: 1000;
+      max-width: 600px;
+      width: 90%;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -236,9 +261,29 @@
       <button id="one-on-one-btn">Start 1‑on‑1 Chat</button>
       <button id="group-chat-btn">Initiate Group Chat</button>
     </div>
+    <!-- Instructions Button -->
+    <div id="instructions-container" style="text-align: center; margin-bottom: 20px;">
+      <button id="instructions-btn">How It Works</button>
+    </div>
     <div id="chat-options-panel" style="display:none;"></div>
     <div id="invite-panel" style="display:none;"></div>
     <div id="notifications"></div>
+  </div>
+
+  <!-- Instructions Dialog Elements -->
+  <div id="instructions-overlay"></div>
+  <div id="instructions-dialog">
+    <h3>How It Works</h3>
+    <p>Welcome to the Downtime App Demo simulation. Here’s how it works:</p>
+    <ul>
+      <li>Each user has a contacts list and personalized tier assignments which determine connection preferences.</li>
+      <li>You can toggle user availability to control who can join chats.</li>
+      <li>Start a 1‑on‑1 or group chat using the chat buttons. Only available users are considered.</li>
+      <li>You can invite users to a chat, add new users to your contacts, or remove users from the network.</li>
+      <li>Your tier settings and contacts determine which users can connect with one another.</li>
+    </ul>
+    <p>Enjoy exploring the simulation!</p>
+    <button id="close-instructions-btn">Close</button>
   </div>
 
   <script>
@@ -618,7 +663,7 @@
     function showInviteJoinDowntimePanel(inviter) {
       let html = `<h3>Add a Friend to Your Contacts (Invited by ${inviter.name})</h3>`;
       html += `<p>Choose invitation type:</p>`;
-      html += `<button id="invite-existing-btn">Add Existing Friend</button>`;
+      html += `<button id="invite-existing-btn">Add Existing User</button>`;
       html += `<button id="invite-new-btn">Add New Friend</button>`;
       html += `<button id="invite-cancel-btn" class="cancel-btn">Cancel</button>`;
       invitePanel.innerHTML = html;
@@ -757,6 +802,16 @@
     // Event Listeners for Chat Buttons
     oneOnOneBtn.addEventListener('click', startOneOnOneChat);
     groupChatBtn.addEventListener('click', startGroupChat);
+
+    // Instructions dialog event listeners
+    document.getElementById("instructions-btn").addEventListener("click", function() {
+      document.getElementById("instructions-overlay").style.display = "block";
+      document.getElementById("instructions-dialog").style.display = "block";
+    });
+    document.getElementById("close-instructions-btn").addEventListener("click", function() {
+      document.getElementById("instructions-overlay").style.display = "none";
+      document.getElementById("instructions-dialog").style.display = "none";
+    });
 
     // Initial render
     renderUsers();
