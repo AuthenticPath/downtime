@@ -301,22 +301,22 @@
     <h2><strong>2. Managing Your Availability</strong></h2>
     <ul>
       <li>You can <strong>toggle your availability</strong> to control whether others can invite you to chats.</li>
-      <li>If you’re <em>available</em>, other users can invite you to <strong>1-on-1 or group chats</strong>.</li>
+      <li>If you’re <em>available</em>, other users can invite you to <strong>1‑on‑1 or group chats</strong>.</li>
       <li>If you’re <em>unavailable</em>, no one will be able to start a chat with you.</li>
     </ul>
     <p><strong>Example:</strong> Alice is online and marked <em>available</em>, but Bob is <em>unavailable</em>. If you try to start a chat, only Alice will show up as an option.</p>
     <hr>
     <h2><strong>3. Starting a Chat</strong></h2>
     <ul>
-      <li>You can initiate <strong>1-on-1</strong> or <strong>group chats</strong> by clicking the chat buttons:
+      <li>You can initiate <strong>1‑on‑1</strong> or <strong>group chats</strong> by clicking the chat buttons:
         <ul>
           <li><strong>Start 1‑on‑1 Chat</strong> &rarr; Connects you with one available user.</li>
-          <li><strong>Start Group Chat</strong> &rarr; Connects you with multiple available users.</li>
+          <li><strong>Start Group Chat</strong> &rarr; Connects you with multiple available users. (You will be prompted to select either “Call” or “Text” for group chats.)</li>
         </ul>
       </li>
-      <li><strong>Important:</strong> Only users who are <em>available</em> and meet your tier connection settings will be included.</li>
+      <li><strong>Important:</strong> Only users who are <em>available</em> and meet your tier connection settings—as well as your communication preference—will be included.</li>
     </ul>
-    <p><strong>Example:</strong> If you are <em>available</em> and have Alice in <em>Tier 1</em>, but Bob in <em>Tier 3</em>, and your settings only allow <em>Tier 1 and 2</em> connections, Bob won’t be able to join your chat.</p>
+    <p><strong>Example:</strong> If you are <em>available</em> and have Alice in <em>Tier 1</em> who also accepts calls, but Bob only accepts texts and you’re initiating a call chat, Bob won’t be matched.</p>
     <hr>
     <h2><strong>4. Inviting Users and Managing Contacts</strong></h2>
     <ul>
@@ -348,7 +348,7 @@
     </p>
     <hr>
     <h2><strong>7. Experiment and Explore</strong></h2>
-    <p>Feel free to test different <strong>tier settings, availability toggles, and chat invitations</strong> to see how the simulation works. If you have any questions, try adjusting user settings and observing how they affect your ability to connect.</p>
+    <p>Feel free to test different <strong>tier settings, availability toggles, communication preferences, and chat invitations</strong> to see how the simulation works. If you have any questions, try adjusting user settings and observing how they affect your ability to connect.</p>
     <p>Enjoy exploring the <strong>Downtime App Demo</strong>!</p>
     <button id="close-instructions-btn">Close</button>
   </div>
@@ -377,7 +377,8 @@
         available: false,
         willingTiers: ["Tier 1", "Tier 2", "Tier 3"],
         contacts: [2],
-        personalTiers: {} // will be set below
+        personalTiers: {},
+        commPrefs: ["Call", "Text"]  // New: Communication Preferences
       },
       {
         id: 2,
@@ -385,7 +386,8 @@
         available: false,
         willingTiers: ["Tier 1", "Tier 2", "Tier 3"],
         contacts: [1],
-        personalTiers: {} // will be set below
+        personalTiers: {},
+        commPrefs: ["Call", "Text"]  // New: Communication Preferences
       }
     ];
 
@@ -410,7 +412,7 @@
     const chatOptionsPanel = document.getElementById('chat-options-panel');
     const invitePanel = document.getElementById('invite-panel');
 
-    // Matching: Based on personal tier assignments and willingness.
+    // Matching: Based on personal tier assignments, willingness, and communication preferences.
     function canConnect(userA, userB) {
       const tierAB = userA.personalTiers[userB.id] || "Tier 1";
       if (tierAB === "Blocked") return false;
@@ -419,6 +421,10 @@
       const tierBA = userB.personalTiers[userA.id] || "Tier 1";
       if (tierBA === "Blocked") return false;
       if (!userB.willingTiers.includes(tierBA)) return false;
+
+      // Ensure users share at least one common communication preference.
+      const commonPrefs = userA.commPrefs.filter(p => userB.commPrefs.includes(p));
+      if (commonPrefs.length === 0) return false;
 
       return true;
     }
@@ -437,6 +443,13 @@
           <div class="control-group">
             <label for="avail-${user.id}">Availability:</label>
             <input type="checkbox" id="avail-${user.id}" ${user.available ? 'checked' : ''}>
+          </div>
+          <div class="control-group">
+            <label>Communication Preference:</label>
+            <input type="checkbox" id="comm-call-${user.id}" value="Call" ${user.commPrefs.includes("Call") ? "checked" : ""}>
+            <label for="comm-call-${user.id}">Call</label>
+            <input type="checkbox" id="comm-text-${user.id}" value="Text" ${user.commPrefs.includes("Text") ? "checked" : ""}>
+            <label for="comm-text-${user.id}">Text</label>
           </div>
           <div class="control-group">
             <label>Willing to talk with:</label>
@@ -487,6 +500,27 @@
         availCheckbox.addEventListener('change', (e) => {
           user.available = e.target.checked;
           updateUserCardStyle(user.id);
+        });
+        // Communication Preference checkboxes event listeners.
+        const commCallCheckbox = card.querySelector(`#comm-call-${user.id}`);
+        const commTextCheckbox = card.querySelector(`#comm-text-${user.id}`);
+        commCallCheckbox.addEventListener('change', (e) => {
+          if (e.target.checked) {
+            if (!user.commPrefs.includes("Call")) {
+              user.commPrefs.push("Call");
+            }
+          } else {
+            user.commPrefs = user.commPrefs.filter(p => p !== "Call");
+          }
+        });
+        commTextCheckbox.addEventListener('change', (e) => {
+          if (e.target.checked) {
+            if (!user.commPrefs.includes("Text")) {
+              user.commPrefs.push("Text");
+            }
+          } else {
+            user.commPrefs = user.commPrefs.filter(p => p !== "Text");
+          }
         });
         const willingCheckboxes = card.querySelectorAll(".willing-tiers input[type='checkbox']");
         willingCheckboxes.forEach(chk => {
@@ -611,30 +645,37 @@
       updateChatOptionsPanel();
     }
 
-    // Start Group Chat
+    // Start Group Chat with communication method selection.
     function startGroupChat() {
-      const availableUsers = users.filter(u => u.available);
+      const chatType = prompt("Enter group chat type: 'Call' or 'Text'");
+      if (chatType !== "Call" && chatType !== "Text") {
+        addNotification("Invalid group chat type. Please try again.");
+        return;
+      }
+      // Filter available users who support the chosen communication method.
+      const availableUsers = users.filter(u => u.available && u.commPrefs.includes(chatType));
       if (availableUsers.length < 2) {
-        addNotification("No one in your network is available right now. Try again later!");
+        addNotification("No one in your network is available right now with the selected communication preference. Try again later!");
         return;
       }
       const initial = availableUsers[0];
       const participants = [initial];
       availableUsers.slice(1).forEach(candidate => {
-        if (canConnect(initial, candidate)) {
+        if (canConnect(initial, candidate) && candidate.commPrefs.includes(chatType)) {
           participants.push(candidate);
         }
       });
       if (participants.length < 2) {
-        addNotification("Not enough connectable participants for a group chat.");
+        addNotification("Not enough connectable participants for a group chat with the selected method.");
         return;
       }
       currentChat = {
         type: "group",
+        commMethod: chatType,
         participants: participants
       };
       markUsersUnavailable(participants);
-      addNotification(`Group chat connected: ${participants.map(u => u.name).join(", ")}`);
+      addNotification(`Group ${chatType} chat connected: ${participants.map(u => u.name).join(", ")}`);
       updateChatOptionsPanel();
     }
 
@@ -664,11 +705,17 @@
 
     // Upgrade 1‑on‑1 to Group Chat (renamed to Start a Group Chat)
     function upgradeToGroupChat() {
-      const availableUsers = users.filter(u => u.available && !currentChat.participants.some(p => p.id === u.id));
+      const chatType = currentChat.commMethod || prompt("Enter group chat type: 'Call' or 'Text'");
+      if (!chatType || (chatType !== "Call" && chatType !== "Text")) {
+        addNotification("Invalid group chat type.");
+        return;
+      }
+      // For upgrade, only add users that support the group's communication method.
+      const availableUsers = users.filter(u => u.available && u.commPrefs.includes(chatType) && !currentChat.participants.some(p => p.id === u.id));
       const newParticipants = [];
       const inviter = currentChat.participants[0];
       availableUsers.forEach(candidate => {
-        if (canConnect(inviter, candidate)) {
+        if (canConnect(inviter, candidate) && candidate.commPrefs.includes(chatType)) {
           newParticipants.push(candidate);
         }
       });
@@ -681,7 +728,8 @@
         markUserUnavailable(u);
       });
       currentChat.type = "group";
-      addNotification(`Group chat started. Participants: ${currentChat.participants.map(u => u.name).join(", ")}`);
+      currentChat.commMethod = chatType;
+      addNotification(`Group ${chatType} chat started. Participants: ${currentChat.participants.map(u => u.name).join(", ")}`);
       updateChatOptionsPanel();
     }
 
@@ -690,7 +738,8 @@
       const inviter = currentChat.participants[0];
       const inviteOptions = users.filter(u => 
         inviter.contacts.includes(u.id) && 
-        !currentChat.participants.some(p => p.id === u.id)
+        !currentChat.participants.some(p => p.id === u.id) &&
+        (currentChat.type !== "group" || u.commPrefs.includes(currentChat.commMethod))
       );
       if (inviteOptions.length === 0) {
         addNotification("No contacts available to invite to chat.");
@@ -713,7 +762,7 @@
         e.preventDefault();
         const selectedId = parseInt(document.getElementById("inviteChatSelect").value);
         const invitedUser = users.find(u => u.id === selectedId);
-        if (invitedUser && canConnect(currentChat.participants[0], invitedUser)) {
+        if (invitedUser && canConnect(currentChat.participants[0], invitedUser) && (currentChat.type !== "group" || invitedUser.commPrefs.includes(currentChat.commMethod))) {
           currentChat.participants.push(invitedUser);
           markUserUnavailable(invitedUser);
           addNotification(`Invited ${invitedUser.name} to chat.`);
@@ -845,7 +894,8 @@
         available: true,
         willingTiers: ["Tier 1", "Tier 2", "Tier 3"],
         contacts: [inviter.id],
-        personalTiers: {}
+        personalTiers: {},
+        commPrefs: ["Call", "Text"]  // New users default to both communication methods.
       };
       inviter.contacts.push(newId);
       inviter.personalTiers[newId] = chosenTier;
